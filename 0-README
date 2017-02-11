@@ -96,22 +96,23 @@ available from the release site http://MAPP.eecs.berkeley.edu, not this
       other directory in MATLAB's default path).
 
     - Start MATLAB. Within MATLAB, give the commands:
-      > start_MAPP 
-      > MAPPtest
-    or
-      > MAPPtest('showresults') % to see outputs/plots
+
+        start_MAPP 
+        run_BJTdiffpair_DCsweep % a quick test, should produce a tanh() curve
+        MAPPtest_quick
+        MAPPtest % takes about 10m in MATLAB; longer in Octave
+        % MAPPtest('showresults') % to see outputs/plots
+        % the following are not maintained regularly, might throw some errors
+        run_ALL_A1oDAEAPI_tests % this takes a long time
+        run_ALL_A2oDAEAPI_tests % if you have access to the A2oDAEAPI submodule
+        run_ALL_A3oDAEAPI_tests % if you have access to the A3oDAEAPI submodule
 
 4. To clean up the installation (eg, prior to commit/push):
 
     $ make clean
     $ make autoclean
 
-5. Step 3 above does not test A2oDAEAPI or A3oDAEAPI functionalities. Running
-   run_ALL_A2oDAEAPI_tests and run_ALL_A3oDAEAPI_tests will illustrate and
-   test some of this functionality. Warning: these can take a long time to
-   run.
-
-6. To use/test VAPP (assuming you configured with --with-VAPP), after step 3 
+5. To use/test VAPP (assuming you configured with --with-VAPP), after step 3 
    above, give the commands:
       > start_VAPP 
       > help VAPP

@@ -1,0 +1,27 @@
+(INCOMEPLTE) 
+TODO: COMPLETE THIS ONCE THE HELP SYSTEM IS IN FINAL FORM 
+
+This is the instruction file for how the MAPP help system works for the
+MATLAB version (henceforth, MAPP-MATLAB) and you can comment your new
+MATLAB code so that it confirms to the standard expected by the help
+system. 
+
+-- Before understanding how the MAPP-MATLAB help system works, you must
+   aware of how the MATLAB help system works in general. If you do not,
+   then go read it here (Note that this link is active as of June 26th
+   2013):
+
+   http://www.mathworks.com/help/matlab/ref/help.html
+
+   Reading some more "help"-related documents off the internet may be
+   useful too. Just "google" (TODO: Why don't we actually provide this?)
+
+1. As there is no specific directory or file called MAPP(.m), a
+   directory called "MAPP" is created in
+   MAPP-installation/Documentation/MAPP with a file "Contents.m". During
+   the installation process (see the "Makefil.in"), this directory and
+   file are created. 
+
+   IMP: The Contents.m file is a MATLAB all-line-commented script, the
+   contents of which (except addition of "%" sign before each line) are
+   read from /MAPP-svn-workingcopy/help/help_MAPP.txt

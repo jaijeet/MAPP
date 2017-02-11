@@ -1,0 +1,127 @@
+CYGWINPREFIX=@CYGWINPREFIX@
+A1oDAEAPITOP=`pwd`
+A1oDAEAPIVERSION=@A1oDAEAPIVERSION@
+A1oDAEAPIINSTALLTOPDIR=$(CYGWINPREFIX)@prefix@
+	# WATCH OUT for terminating spaces in the above!
+A1oDAEAPIINSTALLDIRLIB=@A1oDAEAPIINSTALLDIRLIB@
+A1oDAEAPIBINDIR=$(A1oDAEAPIINSTALLTOPDIR)/bin
+#RELVERSIONCMD=`head -n 1 00-VERSION | sed -e 's/ /_/g'`
+#RELVERSION="${RELVERSIONCMD}"
+RELVERSION="$(A1oDAEAPIVERSION)"
+#RELVERSIONEXT="${RELVERSIONCMD}-release"
+RELVERSIONEXT="$(RELVERSION)-release"
+DAEAPIINSTALLDIR=@DAEAPIINSTALLDIR@
+TMPDIR=/var/tmp
+
+MATLAB_SUBDIRS = analyses-algorithms test-scripts usability-helpers utils
+
+all: ./utils/setuppaths_A1oDAEAPI.m pcode
+	@echo "Next step:"
+	@echo "	$$ make install # will install to $(A1oDAEAPIINSTALLTOPDIR)"
+	@echo ""
+	@echo "  [To clean up:"
+	@echo "  	$$ make clean # remove make-generated files (eg, ./staging)"
+	@echo "  	$$ make installclean # remove installation in $(A1oDAEAPIINSTALLTOPDIR)"
+	@echo "  	$$ make autoclean # remove autoconf-generated files"
+	@echo "  	$$ make cleaneverything # do all the above"
+	@echo "  ]"
+	@echo ""
+
+staging: 
+	@if [ ! -e staging ]; then mkdir staging; fi
+	@cd staging; ln -s ../analyses-algorithms/HB/utils/*.m ../analyses-algorithms/HB/test-scripts/*.m ../analyses-algorithms/HB/*.m ../analyses-algorithms/*.m ../doc/*.m ../utils/*.m ../usability-helpers/*.m ../test-scripts/*.m .
+	@echo "staging/ directory with soft links created."
+
+./utils/setuppaths_A1oDAEAPI.m: ./utils/setuppaths_A1oDAEAPI_template.m
+	@echo "creating $@";
+	@cat $< | sed -e 's#__DAEAPIINSTALLDIR__#$(DAEAPIINSTALLDIR)#g' -e 's#__A1oDAEAPIINSTALLDIR__#$(A1oDAEAPIINSTALLTOPDIR)#g' -e 's#__A1oDAEAPIINSTALLDIRLIB__#$(A1oDAEAPIINSTALLDIRLIB)#g' >| $@;
+	@
+
+makeA1oDAEAPIINSTALLDIRLIB: installclean
+	@ mkdir -p $(A1oDAEAPIINSTALLDIRLIB)
+	@ echo "created $(A1oDAEAPIINSTALLDIRLIB)"
+	@echo ""
+
+pcode: ./utils/setuppaths_A1oDAEAPI.m
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(fname=$$(echo $$dir/*.m | awk '{print $$1}'); if [ -e $$fname ]; then cd $$dir; echo "making pcode in $$dir"; echo "pcode *.m" | matlab -nodesktop -nosplash -nojvm; fi) \
+	done
+
+installsrcreal: makeA1oDAEAPIINSTALLDIRLIB
+	@tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./not-in-svn/ --exclude "*.p" -cf - . | (cd $(A1oDAEAPIINSTALLDIRLIB); tar xf -)
+	@echo "Done with (source) installation."
+	@echo ""
+
+installsrc: installsrcreal installmsg
+
+installmsg: 
+	@echo "---------------------------------------------------------------"
+	@echo "A1oDAEAPI Quickstart: start MATLAB and"
+	@echo '	> addpath '"$(A1oDAEAPIINSTALLDIRLIB)/utils"
+	@echo '	> setuppaths_A1oDAEAPI'
+	@echo '	> run_AoDAEAPI_tests(ALL_DC_tests)'
+	@echo '	> run_AoDAEAPI_tests(ALL_AC_tests)'
+	@echo '	> run_AoDAEAPI_tests(ALL_LTInoise_tests)'
+	@echo '	> run_AoDAEAPI_tests(ALL_QSSsens_tests)'
+	@echo '	> run_AoDAEAPI_tests(ALL_misc_tests)'
+	@echo '	> run_AoDAEAPI_tests(ALL_transient_tests)'
+	@echo '	or to run all the above tests in one long sequence:'
+	@echo '	> run_ALL_A1oDAEAPI_tests'
+	@echo ""
+	@echo "See $(A1oDAEAPIINSTALLDIRLIB)/0-README for more information."
+	@echo ""
+
+installreal: all makeA1oDAEAPIINSTALLDIRLIB
+	@tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./not-in-svn/ --exclude "*.m" -cf - . | (cd $(A1oDAEAPIINSTALLDIRLIB); tar xf -)
+	@echo "Done with (pcode) installation."
+	@echo ""
+
+install: installreal installmsg
+
+installclean:
+	@echo "removing $(A1oDAEAPIINSTALLTOPDIR)..."
+	@rm -fr $(A1oDAEAPIINSTALLTOPDIR)
+	@echo ""
+
+autoclean: 
+	@rm -fr ./configure config.status autom4te.cache config.log ./Makefile
+
+cleaneverything: clean installclean autoclean
+
+clean:
+	@if [ -d ./staging ]; then FILES=`find ./staging -mindepth 1 -not -type l -print`; if [ "$$FILES" != "" ]; then echo "./staging contains non-soft-links: $${FILES}"; echo "Please move the above files out of ./staging/, then run make clean again."; else echo "removing ./staging/."; rm -fr staging; fi; fi
+	@echo removing ./utils/setuppaths_A1oDAEAPI.m; rm -f ./utils/setuppaths_A1oDAEAPI.m
+	@echo "removing all generated .p files"
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(cd $$dir; rm -f *.p) \
+	done
+
+snapshot:
+	@echo "making snapshot ${RELVERSION}..."
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@ln -sT ${A1oDAEAPITOP} ${TMPDIR}/${RELVERSION}
+	@cd ${TMPDIR}/${RELVERSION}; if [ -e Makefile ]; then make -i autoclean; fi
+	@tar -C ${TMPDIR} --exclude "*.svn" --exclude ./staging --exclude ./not-in-svn -hzcvf "${TMPDIR}/${RELVERSION}".tgz "${RELVERSION}" > /dev/null
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@echo A1oDAEAPI snapshot tarball ${TMPDIR}/${RELVERSION}.tgz created.
+	@echo ""
+
+release:
+	@echo "making release ${RELVERSIONEXT}..."
+	@echo ""
+	@cd ${A1oDAEAPITOP}; if [ -e Makefile ]; then make -i autoclean; fi
+	@cd ${A1oDAEAPITOP}; autoconf; rm -fr autom4te.cache
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@mkdir ${TMPDIR}/${RELVERSIONEXT}
+	@tar -C ${A1oDAEAPITOP} --exclude ./staging --exclude ./not-in-svn -hcf - . | tar -C ${TMPDIR}/${RELVERSIONEXT} -xf - 
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}/configure.ac
+	@cd ${TMPDIR}/${RELVERSIONEXT}; if [ -e Makefile ]; then make -i autoclean; fi
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}.tgz
+	@tar -C ${TMPDIR} --exclude ./staging --exclude "*.svn" -hzcvf "${TMPDIR}/${RELVERSIONEXT}".tgz "${RELVERSIONEXT}" > /dev/null
+	@echo ""
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@echo A1oDAEAPI release tarball ${TMPDIR}/${RELVERSIONEXT}.tgz created.
+	@echo ""
+

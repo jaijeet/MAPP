@@ -1,0 +1,10 @@
+
+Nonlinear Differential-Algebraic-Equation (DAE) API. 
+
+
+DAEAPI HELP Topic:
+--------------------------------------------------------------------------------------------
+DAEAPI/DAEs                   - Various circuits represented in MATLAB DAEAPI
+DAEAPI/device-models          - <TODO>NOT SURE IF WE NEED THIS IN HELP 
+DAEAPI/DAEAPI-utils           - Various utility functions for constructing MATLAB DAEAPI 
+DAEAPI/DAEAPI-test-scripts    - Demonstration of various tests on MATLAB DAEAPI

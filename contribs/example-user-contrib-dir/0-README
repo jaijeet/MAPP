@@ -1,0 +1,38 @@
+This is a skeleton README file for code contributions to MAPP in a contrib
+subdirectory.
+
+Author(s): 
+
+License for this module: please specify the Copyright Holder and License 
+terms in ./00-LICENSE, as described in help MAPPlicense.
+
+Abstract: an description of the module's functionality.
+
+Example usage: should contain quick/simple examples for a user of MAPP to
+    run your code.
+
+Help: you should add some help text that makes it easy for MAPP users to
+    access your contribution, learn about it, use it and potentially
+    contribute further to it.
+
+======================
+
+This is the README file for the example code contribution subdirectory
+./simple_RLC_model/.
+
+Author(s): Tianshi Wang    tianshi@berkeley.edu  2014/12/10
+
+License for this module: please specify the Copyright Holder and License 
+terms in ./00-LICENSE, as described in help MAPPlicense.
+
+Abstract: the example code contribution implements "a new device" in MAPP ---
+		  an RLC tank, creates a test circuit with it and runs several analyses
+          on the circuit.
+
+Example usage: to run a quickstart for the contributed code:
+          >> run_ALL_tests_on_simple_RLC_model
+
+Help: some help texts have been added to the example code contribution.
+      For example,
+          >> help RLC_ModSpec_wrapper
+          >> help isrcRLC_ckt

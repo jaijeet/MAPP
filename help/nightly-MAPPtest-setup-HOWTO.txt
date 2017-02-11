@@ -1,0 +1,178 @@
+How to run MAPPtest automatically on <your machine> from cron
+-------------------------------------------------------------
+    0. You need (of course) an account on <your machine> (say: ataraxia), 
+       as well as MAPP svn access on hagrid:
+       You will need an account on <your machine> to run automatic MAPPtest. 
+       You will also need access to MAPP svn on hagrid.
+       Please ask JR if you don't have them.
+    
+    1. You should have "mail" and "postfix" installed and working
+       on <your machine>.  Eg, on Ubuntu,
+           $ sudo apt-get install mailutils postfix
+       should do it.
+
+       You will need to configure postfix. On Ubuntu, apt-get pops up a curses
+       GUI with several choices. Choose "Internet Site". It then asks you
+       for a domain name, maybe with something like "berkeley.edu" filled in.
+       DO NOT ACCEPT IT. Instead, make it blank. It will warn you, but put in
+       a blank domain name.
+
+       Then start postfix:
+        $ sudo /etc/init.d/postfix start
+    
+       Test that mail works: run (on <your machine>)
+           $ echo hello | mail -s "test message from $(hostname)" \
+          <your_email_address>
+       and check your email.
+    
+    2. Password free ssh login from <your machine> to hagrid
+       Even if you already have setup passphrase-free ssh public/private
+       key access from <your machine> to hagrid, it is essential to have
+       a separate key for MAPPtest - one that has no passphrase.
+           1> Generate ssh key
+           Here is an example of how I generate my key
+    
+           $ ssh-keygen  -t dsa
+           Generating public/private dsa key pair.
+           Enter file in which to save the key
+           (/home/bichen/.ssh/id_dsa):/home/bichen/.ssh/MAPPtest_key
+           Enter passphrase (empty for no passphrase):(LEAVE EMPTY)
+           Enter same passphrase again:
+           Your identification has been saved in
+           /home/bichen/.ssh/MAPPtest_key.
+           Your public key has been saved in
+           /home/bichen/.ssh/MAPPtest_key.pub.
+           ...
+    
+        2> Copy the content of /home/$USER/.ssh/MAPPtest_key.pub on 
+           <your machine>, append it to /home/$USER/.ssh/authorized_keys on
+           hagrid. (Make sure it's all on one line - ie, that copying has not
+       introduced line breaks).
+    
+        3> Test that it works:
+           On <your machine>,
+            $ ssh -i ~/.ssh/MAPPtest_key hagrid
+           should log you into hagrid without a password.
+           (Important: disable keychain before you do this, otherwise
+           it might use another cached key).
+    
+    3. In your local MAPP-SVN on <your machine>, run svn update (to update to
+       at least r178).  Eg, JR does:
+        $ cd ~/unison/code/newSPICE++/MAPP-SVN
+        $ #  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        $ # denote this path by $MAPPLOCALSVNPATH
+        $ svn update
+
+    4. Check your ~/.bashrc to ensure that:
+
+       a. your PATH variable is properly set up. In particular, matlab should
+      be in your PATH - which(matlab) should find matlab. PATH should, of
+      course, be exported. 
+
+       b. your PATH and other important variables are ALWAYS set up,
+          regardless of whether ~/.bashrc is being sourced in an interactive
+      session (like a terminal) or not. Note that many "standard" .bashrc
+      templates will only set up PATH and other important shell variables
+      in an interactive environment. Look for lines like:
+          if test "$PS1" != "" ; then
+            [...]
+            export PATH=...
+            [...]
+        fi
+      Checking PS1 is one way of testing whether the session is interactive.
+
+       If step 5 below works fine, but step 6 fails, one reason (of many!) is
+       that your PATH variable is not being set up right when ~/.bashrc
+       is sourced in a non-interactive environment.
+    
+    5. The MAPP testing script is: 
+               $MAPPLOCALSVNPATH/trunk/MAPPtesting/run-MAPPtest-1.sh
+       
+       It is called with 3 arguments:
+
+       a. branch to be tested. Examples: 
+             trunk, jr-branches/off-trunk-r144
+
+       b. the name (just the name) of your ssh key from step 2 above.
+             Eg: MAPPtest_key
+
+       c. an email address (or addresses, but no spaces) to send email to.
+       
+       You should run it manually to check that it works. For example, here 
+       is how JR runs it (this would be on <your machine>):
+       
+       $ ~/unison/code/newSPICE++/MAPP-SVN/trunk/MAPPtesting/run-MAPPtest-1.sh \
+               trunk MAPPtest_key jr@berkeley.edu,tianshi@berkeley.edu
+
+       It should run for a while, producing some output. If you run 
+       ls -t on your $TMPDIR (or /tmp), you will see that it creates a
+       directory named MAPPtest-$USER-$(date)-*. cd inside that and look
+       around to see what's going on, if you are interested, or for debugging. 
+       You should also look through
+       $MAPPLOCALSVNPATH/trunk/MAPPtesting/run-MAPPtest-{1,2}.sh, of course
+       (ie, RTSL).
+
+       If everything goes well, it should send you email at the end declaring
+       that the HEAD revision on trunk has passed all tests. Check your email.
+
+    6. Set up cron to run the test automatically every day
+
+        1> Edit your crontab using the command
+            crontab -e
+
+        2> Append a line of the following form to your crontab:
+           MIN HOUR * * * USER=YOURUSERNAME HOME=YOURHOMEDIR /FULL/PATH/TO/run-MAPPtest-1.sh BRANCH-TO-TEST SSH-KEY-NAME EMAIL-ADDRESSES >| /tmp/run-MAPPtest-1-trunk.out 2>&1 
+           # Replace MIN, HOUR with the time you want to run MAPPtest. 
+           # Replace YOURUSERNAME by your user name (eg, jr)
+           # Replace YOURHOMEDIR by the your home directory's path (eg,
+           #                                 /home/jr)
+           # Replace /FULL/PATH/TO/run-MAPPTEST-1.sh with full pathname
+           #        $MAPPLOCALSVNPATH/trunk/MAPPtesting/run-MAPPtest-1.sh
+           # 
+           # Replace BRANCH-TO-TEST by the name of the branch you want to test
+           #                              (eg, trunk)
+           # Replace SSH-KEY-NAME by the name of your SSH key (just the name)
+           # Replace EMAIL-ADDRESSES by a comma-separated list of email
+           #                     addresses (no spaces)
+           # REMEMBER: it should all be on ONE LINE (watch out for vim
+           #    automatically entering line feeds and splitting the long line
+           #    across multiple lines)
+    
+           Here is an example of my crontab entry
+           46 11 * * * USER=jr HOME=/home/jr /home/jr/unison/code/newSPICE++/MAPP-SVN/trunk/MAPPtesting/run-MAPPtest-1.sh trunk MAPPtest_key jr@berkeley.edu,tianshi@berkeley.edu >| /tmp/run-MAPPtest-1-trunk.out 2>&1 
+
+        3> Wait for the appointed time plus a little more and make sure it
+       works: check your email, and check /tmp/run-MAPPtest-1.out.
+
+How to add new test simulation to MAPPtest
+------------------------------------------
+    1. Setup test struct
+         Set up test strcut for the new test simulation. The
+         struct contains information necessary for the test
+         simulation, such as DAE, analysis type, reference data
+         name and etc. Please refer to newMAPPtest_example.m
+         attached in email to see how to setup test struct for an
+         AC simulation.  Move newMAPPtest_example.m into
+        ^/BRANCHNAME/Analyses1-on-DAEAPI/test-scripts
+         Note that struct for different analysis type can be different.
+         Please refer to defaultMAPPtests.m.
+
+    2. Save reference data
+       On bichen's branch, run
+        newTest=newMAPPtest_example.m #JR: is the .m needed?
+        MAPPtest({newTest}, 'update');
+       On other branches or trunk, run
+           MAPPtest(newMAPPtest, 'update');
+       Simulation result is saved in the directory specified in 
+       newMAPPtest_example.m. Make sure that the simulation result 
+       is correct. 
+
+    3. Include new test in defualt MAPP test list.
+       Copy the content of newMAPPtest_example.m, append it to
+       defaulMAPPtests.m, remember to include the new test struct in
+       allTests.
+    
+    4. Check:
+       run
+        MAPPtest
+       to test if the new test is added successfully.

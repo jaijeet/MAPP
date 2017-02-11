@@ -1,0 +1,50 @@
+DAEAPI Wrapper:
+	DAEAPI is the structure to present Differential Algebraic Equations for
+	systems such as circuits and etc. It contains information such as parameter
+	names/values, equations and etc that are necessary to describe the DAE.
+	Building DAEAPI manually can be very labour intensive, as DAEAPI contains
+	too many fields. For circuits systems, we already have MNA/STA Equation
+	Engine so we could implement circuit in cktnetlist format, and equation
+	engine will build the DAEAPI by processing the cktnetlist. However for
+	systems in other domain, such as RRE, we still need to build DAEAPI
+	manually.  
+	DAEAPI wrapper is a simplifed format to build DAEAPI. User of DAEAPI wrapper
+	fills in only necessary information about the DAEAPI such as functions,
+	unknowns and parameters, and wrapper will take care of other information
+	automatically. 
+
+How to build DAEAPI with DAEAPI wrapper:
+	1. Use 
+		DAE = init_DAE();
+	   to build the basic skeleton of DAE. 
+	2. Then Use
+		DAE = add_to_DAE(DAE, 'field_name', field_value);
+	   to augment the skeleton structure.
+	3. Use
+		DAE = end_DAE(DAE);
+	   to finish constructing;
+
+Demo: How to use DAEAPI wrapper to build DAEAPI for an simple RC line circuit
+	1. circuit: RC line with two segments
+	   SPICE-like netlist description
+		U in gnd A*sin(2*pi*f*t)
+		R1 in 1 R
+		C1 1 gnd C
+		R2 1 2 R
+		C2 2 gnd C
+
+	2. Modified Nodal Analysis Equations:
+		KCL_1: C de1/dt + (e1(t) - u(t))/R + (e1(t) - e2(t))/R = 0
+		KCL_2: C de2/dt + (e2(t) - e1(t))/R = 0
+
+		input: u(t)
+		output: e2(t)
+
+	3. DAEAPI wrapper function:
+		Please refer to 
+		  RCline_wrapper.m
+
+	4. Run simulation on DAE
+		Please refer to
+		  test_RCline_wrapper.m
+

@@ -1,0 +1,59 @@
+`include "constants.vams"
+`include "disciplines.vams"
+
+module RRAM_UMich(p, n);
+inout			p, n;
+electrical		p, n, l_node;
+
+parameter real Area      = 1e-18; // device area (m^2)
+parameter real Ua        = 0.87; // ion barrier height (V)
+parameter real h         = 5e-9; // film thickness(m)
+parameter real Phi0      = 1; // electron barrier height (V)
+parameter real Beta      = 10.56; // parameter equal to the attempt frequency multiplied by the hopping distance
+parameter real Kappa     = 1903.84; // parameter that determines the rate dependence on applied voltage
+parameter real T         = 300; // temperature
+
+real vpn, Alpha, F0, F, high_bias, c1_l, low_bias, ion_flow;  
+
+branch (l_node, n) l1;
+branch (n, l_node) l2;
+
+analog function real smoothstep;
+    input x;
+    real  x;
+    begin
+        smoothstep = 1 / (1+limexp(-3*x));
+    end
+endfunction // smoothstep
+
+analog begin
+    k = `P_K; // Boltzmann's Constant (joules/kelvin)
+    q = `P_Q; // Electron Charge (C)
+    m = 0.31*9.10938215e-31; // Effective Electron Mass in a-Si: amorphous Silicon (kg)
+                       // TODO: is there a higher-precision version?
+    plank = `P_H; // Plank's Constant (joules*sec)
+
+    vpn = V(p, n);
+
+	Alpha = 2*sqrt(2*m) / (plank/(2*pi));
+
+	F0 = 2*Alpha*sqrt(q*Phi0^3);
+	F = abs(vpn)/(h-l);
+	high_bias = 4*pi*m*q^2/ (plank^3*Alpha^2*Phi0) * F^2 * limexp(-F0/F);
+
+	c1_l = Alpha * (h - l) / (2*sqrt(Phi0*q));
+	low_bias = 8*pi*m*q*(k*T)^2 / plank^3 * pi/ 
+			   ( c1_l * k*T * sin(pi*c1_l *k*T) * limexp(-Alpha * (h-l) *sqrt(q*Phi0))
+				 * sinh(Alpha*(h-l)) * abs(vpn)/4 * sqrt(q/Phi0));
+
+    I(p, n) <+ sign(vpn) * Area * ( 
+			   (1-smoothstep(abs(vpn)-Phi0)) * low_bias + 
+			   smoothstep(abs(vpn)-Phi0)     * high_bias);
+	ion_flow = Beta * limexp(-Ua/$vt) * sinh(vpn * Kappa/T);
+	if l <= 0 && ion_flow < 0 begin
+		I(l1) <+ 0;
+	end else begin
+		I(l1) <+ ion_flow;
+	end
+end
+endmodule

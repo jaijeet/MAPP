@@ -1,0 +1,265 @@
+ModSpec-v0.0.1+delta--ModSpec-SVN-r74-jr
+
+Changelog:
+
+- TODOs:
+  - add init and limiting support, a la SPICE but generalized
+    - 2012/09/26: design decision: init/limiting support should be primarily 
+      at the DAE level, not at the ModSpec device level.
+      - why: 
+        - because we want the keep the device interface as simple and clean
+	  as possible. If we put init/limiting features to the device, it will
+	  have to be given flags to turn the feature on/off. These flags will
+	  have to be used inside the device's f/q functions. Compact modelling
+	  people who write f/q will likely get confused about init/limiting
+	  (which requires some knowledge of practical NR algorithms, which
+	  they cannot be expected to have) and will likely make mistakes.
+	- keeping the ugliness of limiting at the DAE level allows us not to
+	  mess up the device level. Setting up the DAE and its init/limiting
+	  feature support is done once (and automatically) via EquationEngine
+	  code.
+      - the DAE should provide features that activate/de-activate init and
+        limiting.  When activated, these features will change the vecX and vecY 
+	passed to each ModSpec device.
+	- the DAE will of course, need to know what values to initialize
+	  vecX/vecY to, and how to limit them. This information it will get
+	  from functions for init/limiting support within the ModSpec device.
+	  The key here is that these are standalone functions that have
+	  nothing to do with the f/q of ModSpec.
+	- the DAE should also provide features to store old values of those vecX
+	  and vecY used in limiting for every device. Each ModSpec device will
+	  provide functions that identify which members of vecX and vecY need
+	  to be stored for limiting.
+      - functions derived from the DAE (such as g(x) for DC, g(x,tn) for
+	transient, etc.) should also have these features, which they will
+	pass on to the DAE.
+	- maybe we need to define an algebraic_function object for any 
+	  algebraic function g(x), which encapsulates these init/limiting
+	  features. (Currently, we are passing function handles to NR, which
+	  makes it inconvenient to use init/limiting features.)
+      - finally, NR should be updated to do the first iteration with init set
+        for g(x), and optionally, to do all iterations with limiting set.
+  - add parameter type and range support.
+    - the parser can make use of them, and/or ModSpec_setparms can run checks.
+  - add noise support functions (and get them working with DAEAPI noise
+    analysis).
+  - error handling, especially in the C++ API.
+    - fqei should detect floating point and other errors, and pass it up for
+      handling.
+  - need to modify the APIs to a function fqei that by default computes
+    ALL the functions fe, fi, qe, qi in one call. It could have optional
+    arguments asking it not to compute some of them, necessarily. This is
+    crucial for efficiency in the C++ interface.
+    - currently, DAEAPI calls the model code 4 or 5 times: for f, q,
+      df_dx, df_du, dq_dx. This makes, eg BSIM3, unbearably slow.
+      To support making it much more efficient, we will add a routine
+      fq_and_dfq_dxu, which calculates everything in 1 call. To support
+      this in ModSpec, we will:
+      - add an feqefiqi routine to the spec
+        - and get all its derivatives automatically (wrt vecX, vecY, vecU) 
+	  by making a long input vecvalder vector vecXYU, and getting vecX,
+	  vecY, vecZ from it.
+      - also add an feqefiqi_ddvecXYU routine to the spec, which returns
+        all values and derivatives in 1 call by calling the above. Of course,
+	instead of using vecvalder, this could be coded "by hand", which
+	should make it more efficient. For DAAV6, most of the real work is
+	already done.
+      - one idea is to cache results (Xyce does this). Ie, whenever
+        fe/fi/qe/qi/dd?? is called, check if the arguments match the stored
+	values of the arguments during the previous call. If yes, evaluate
+	all functions/derivatives and store; and return only the appropriate
+	value.
+	- this can also facilitate approximate checks for "fast simulation"
+      - and finally, the above can call code written in C and compiled/linked
+        via mex (as Ning had done), this can make things faster.
+  - change NIL to EENIL (so can have an RRENIL as well, later).
+  - add support for ImplicitEquations to contribute a current/charge to the
+    device's reference node -- currently, there is no such facility. This
+    option can be useful to match SPICE-like implementations of devices like
+    BSIM3, which have branch currents from internal d/s to b. In our current 
+    implementation, we can add these currents to the internal node 
+    ImplicitEquations, but not to the b node, whose output is calculated
+    purely by -(idb+igb+isb). This results in a difference to the
+    overall system equations when the ImplicitEquations are not exactly
+    solved, ie, during the course of NR solution. But at solution, there
+    is no difference.
+    Maybe a new function EENIL.ImplicitEquationrefNodeContrib - will have 
+    f and q components.
+    If a current, this gets added to the reference node's KCL by the equation
+    engine. Think about what happens in the case of a voltage branch.
+  - 2012/08/09: related to the above, think about what happens if we have a
+    3-terminal device, and put an inductor between nodes 1 and ref=3. Then, we
+    can designate v13 as an ExplicitOutput, with i13 being in otherIOs. But if
+    we put it between nodes 1 and 2, we seem not to be able to (seems we must
+    have an internal unknown iL, and an equation v13-v23 - LdiL/dt = 0). So at
+    the very least, our designation of the IOs to be branch voltages/currents
+    from every node to the ref node is unsymmetric and inelegant. It would be
+    better if we could relax this scheme and allow the element to have a set
+    of n "independent" voltage branches, and another set of n "independent"
+    current branches. This should be possible, but is not yet worked out.
+    This is all at the electrical NIL level, of course.
+    - another option is to somehow allow linear combinations of explicitoutputs,
+      to enter the system-level equation set, but this defeats the purpose of
+      having explicitoutputs at all, which is to eliminate some
+      unknowns/equations from the overall system.
+    - a related issue is un-necessary stamp fill-ins at node 3 (using LFAD) when
+      v12 is expressed as v13-v23 - this is happening in jrRLC, for example.
+
+v0.0.1+delta: (all changes by JR)
+	- 2012/10/04: changes to ModSpec-C++-API/
+	  - updated the Makefile to work with Trilinos-10.10.3
+	  - put in build documentation in
+	    doc/doc/0-how-to-compile-the-ModSpec-C++-API
+	- 2012/08/12: changes to ModSpec-C++-API/
+	  - added DAAV6_ModSpec_Element
+	  - added smoothingfuncs/ subdirectory with C++ translations of MATLAB
+	    smoothingfuncs
+	  - streamlined/updated Makefiles
+	  - updated utils/untyped.{h,C} and utils/eString.{h,C}
+	    - fixed bug with untyped/eString = char* s.
+	  - moved dynloaded_ModSpec_Element.h up from subdir tests-for-Xyce
+	  - improvements/bugfix to test_ModSpec_Element_using_dlopen.C
+	- 2012/08/10: changes to ModSpec-C++-API/
+	  - split sacado.h into boost_ublas_typedefs.h and sacado_typedefs.h
+	  - completed test_nExtvars_nIntvars_jacStamp_MNA.C 
+	    - it now calculates jacstamp_Xyce_f/q, as needed by Xyce
+	    - BUT: CORRECTNESS OF THE STAMP NOT TESTED YET.
+	- 2012/08/09: changes to ModSpec-C++-API/
+	  - test_nExtvars_nIntvars_jacStamp_MNA.C now computes all the
+	    incidence matrices
+	    - but only rudimentary testing, so far.
+	- 2012/08/09: changes to ModSpec-C++-API/
+	  - renamed test_jacStamp_MNA.C to test_nExtvars_nIntvars_jacStamp_MNA.C
+	  - fixed bug (wasn't doing l_v calculation right) in tests-for-Xyce/test_nExtVars_nIntvars_MNA.C
+	    - then deleted it, folding it into
+	      test_nExtvars_nIntvars_jacStamp_MNA.C as a function.
+	  - added RLC2_ModSpec_Element - to test voltage explicitoutputs
+	  - cleaned up the directories further (eg, no more soft links in
+	    tests-for-Xyce/)
+	    - including changes to Makefiles
+	  - added nodeindices helper functions to ModSpec_Element.h - useful
+	    for MNA eqn setup
+	  - added print_vector_of_ints to vector_print.{h,C}
+	- 2012/08/09: changes to ModSpec-C++-API/
+	  - updated the Makefiles to use rules properly
+	  - cleaned up the directory, moving old/obsolete stuff under old/
+	  - updated ModSpec_Element.h to also set up and store:
+		vector<string> otherio_types;     // NIL quantity
+		vector<string> otherio_nodenames; // NIL quantity
+		vector<string> explicit_output_types; // NIL quantity
+		vector<string> explicit_output_nodenames; // NIL quantity
+	  - started tests-for-Xyce/test_jacStamp_MNA.C (not yet complete)
+	- 2012/08/07:
+	  - bug in dqi_dY_stamp (ModSpec_Element_common_includes.h) fixed
+	  - setup_ios_otherios upgraded to setup_ios_otherios_iotypes_ionodenames (ModSpec_Element.h)
+	  - generic test_ModSpec_Element_using_dlopen.C written and tested
+	    with Res/RLC
+	  - RLC_ModSpec_Element.{h,C} written properly and tested
+	- 2012/08/06: ModSpec-C++-API devices can now be accessed using
+	  dlopen in a generic way - a pointer to an object of type 
+	  ModSpec_Element or ModSpec_Element_with_Jacobians is returned,
+	  for the object, though it may be of a derived class (like
+	  Res_ModSpec_Element_with_sacado_Jacobians). This works fine
+	  (as demonstrated by test-test-Res_ModSpec_Element_using_dlopen),
+	  except that untyped.o and eString.o need to be included in
+	  Res_ModSpec_Element.so, otherwise it can't find the mangled names.
+	  This could lead to multiple definitions if there are 2 different
+	  elements with .so files each containing untyped.o and eString.o.
+	- 2012/08/06: updated ModSpec-C++-API to make it much cleaner than 
+	  before and to avoid repeating the same code for different devices:
+	  - ModSpec_Element.h classes changed to be completely non-templated,
+	    so no problems with inheriting virtual templated functions.
+	  - Res_ModSpec_Element.{h.C} updated to use fqei_tmpl
+	    - all functions common to all devices that could not be moved
+	      up to ModSpec_Element.h (because of virtual templated inheritance
+	      problems) are now included from ModSpec_Element_common_includes.h.
+	      This avoids having to repeat them for every device.
+	  - added directory dlopen-in-c++/, containing examples illustrating
+	    how to use .so files and dlopen to get C++ objects.
+	- 2012/07/23:
+	  - moved DAAV6ModSpec.m to hand-coded derivatives. This makes it
+	    run 4x faster for ring oscillator transient; but it doesn't seem
+	    faster for the initial transient for HB. Tested with 
+	    DAAV6*char_curves, DAAV6*ringosc.
+	- 2012/07/22:
+	  - added automatic diff support to the MATLAB-API - via:
+	    - ModSpec_derivative_add_ons (inherited by ModSpec_common_skeleton)
+	    - automatic diff functions utils/d{f,q}{e,i}_dvec{X,Y,U}_auto.m
+	  - added a soft link to Ning Dong's VA models
+	- 2012/07/18:
+	  - Added BSIM3ModSpec (BSIM v3, translated from Ning Dong's Verilog-A
+	    version)
+	- 2012/06/13:
+	  - Defined a ModSpec_common_skeleton and moved all MATLAB-API
+	    ModSpecs to inheriting from it.
+	- 2012/05/25:
+	  - added Verilog-A-models directory, with Dimitri's new
+	    (non-functioning) VS model
+	  - added DAAV6 to Matlab-API, it seems to be working with DAEAPI
+	  - added smoothingfuncs/ directory, moved from old SPICE++
+	- 2012/05/16: preliminary version of Res_ModSpec_Element_with_sacado_Jacobians
+		working; adiff using sacado somewhat tested.
+	- 2012/05/13: typedef'd Res_ModSpec_Element to
+	  	Res_ModSpec_Element_with_templated_fqei<double,double,double,double>,
+	  	this seems to be working fine in test-Res_ModSpec_Element.C
+	- 2012/05/13: moved fqei functions to take templated arguments,
+		but had to template the entire ModSpec_Element class
+		to make it compile (since templated member functions
+		cannot be virtual). Working for Res_ModSpec_Element.
+	- 2012/05/13: really preliminary version of ModSpec-C++-API
+	  - preliminary version of ModSpec_Element.h working
+	    - at least for one device (Res_ModSpec_Element, called
+	      within test-Res_ModSpec_Element.C)
+	    - using a primitive version of untyped.h (which uses eString)
+	      for mixed-type vectors parmdefaults, parmvals, etc.
+	- preliminary version of ModSpec-MATLAB-API
+	  - with res, cap, diode w int node, vsrc, isrc examples running
+	    within DAEAPI (using DAEAPI's MNA_EqnEngine) for DC and transient.
+	- directory structure changes
+
+v0.0.1: David Amsallem's original code
+
+
+-----------------------------------------------------------------------------
+Things to do yet (incl. feedback from Sandia May 2012 visit):
+- add bool to untyped
+- add:
+  - parameters: 
+    - device vs model separation
+    - types - not yet there in the Matlab API?
+    - units - not yet there in the Matlab API?
+    - parameter ranges
+    - parameter check functions(?)
+  - initialization
+  - limiting
+  - noise (important for Sandia)
+  - output functions (eg, for showing small signal parameters)?
+    - can we handle this just by assigning names to the jacobian
+      entries?
+
+  - for the C++ API:
+    - an irredundant version (with, eg, no Jacobian functions)
+      - all f/q functions templated, so that sacado can be applied, 
+        or quad-precision can be applied
+
+    - and a redundant version with additional functions specified:
+      - Jacobian functions, including a separate Jacobian stamp
+        - these could, eg, be optimized code
+
+-----------------------------------------------------------------
+Notes during coding:
+
+
+- stuff during Sandia May visit 
+	- Sacado - how best to use it without changing the code?
+	  - templatize fqei (and all doubles)
+	    - easier said than done?
+	- untyped class? vector<untyped>
+	  - done (though highly inelegant, and possibly unstable)
+	- ModSpec API for parms: need to add
+	  - range - yet to do
+	  - unit - done 
+	  - long name / description - done
+	- parsing in Xyce: may need to re-use the y element if all letters have run out
+
+-----------------------------------------------------------------

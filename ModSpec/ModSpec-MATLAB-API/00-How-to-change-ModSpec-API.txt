@@ -1,0 +1,67 @@
+These are notes taken by Tianshi on how to change ModSpec API.
+
+ModSpec is still under development, so there are times when the API functions
+need modifications, such as removing a field (e.g. SpiceKey), renaming a field
+(e.g. QSSlimiting), changing fields' types (e.g. from function handles to
+cellarrays), adding new features (e.g. init/limiting). In such scenarios, it is
+very easy for documentation, code and tests to become inconsistent. Therefore,
+the following steps are recommended when making changes to ModSpec API.
+
+===============================================================================
+How to change ModSpec API?
+Steps to follow:
+-------------------------------------------------------------------------------
+1. document the changes in ModSpecAPI.m, include some comments indicating that
+     the changes haven't been completed yet
+   make sure it shows up correctly in help ModSpecAPI
+-------------------------------------------------------------------------------
+2. update check_ModSpec.m according to the new ModSpec API standards
+-------------------------------------------------------------------------------
+3. update ModSpec_common_skeleton, ModSpec_skeleton_core,
+     ModSpec_common_add_ons, ModSpec_derivative_add_ons if necessary
+   update exampleModSpec.m and example_initlimiting_ModSpec.m if necessary
+   make sure they both pass check_ModSpec properly
+-------------------------------------------------------------------------------
+4. update all built-in ModSpec devices if necessary:
+     resModSpec
+     capModSpec
+     indModSpec
+     vsrcModSpec
+     isrcModSpec
+     vcvsModSpec
+     vccs_for_optocoupler_ModSpec
+     vccsModSpec
+     diodeModSpec
+     EbersMoll_BJT_ModSpec
+     SH_MOS_ModSpec
+     MVS_1_0_1_ModSpec
+     BSIM3v3_2_4_ModSpec
+   make sure they all pass check_ModSpec properly
+-------------------------------------------------------------------------------
+5. update ee_model, add_to_ee_model, finish_ee_model if necessary
+-------------------------------------------------------------------------------
+6. update all ModSpec_wrapper devices if necessary:
+     resistor_ModSpec_wrapper
+     capacitor_ModSpec_wrapper
+     diode_ModSpec_wrapper
+     diodeCapacitor_ModSpec_wrapper
+     vsrc_ModSpec_wrapper
+     basicSHMOS_ModSpec_wrapper
+     SHMOSWithParasitics_ModSpec_wrapper
+     DSAwareSHMOSWithParasitics_ModSpec_wrapper
+     MVS_1_0_1_ModSpec_wrapper
+     tunnelDiode_ModSpec_wrapper
+   make sure they all pass check_ModSpec properly
+-------------------------------------------------------------------------------
+7. modify MNA_EqnEngine's device side such that it conforms to ModSpecAPI
+   modify STA_EqnEngine's device side such that it conforms to ModSpecAPI
+-------------------------------------------------------------------------------
+8. update scripts in ModSpec-Matlab-API/test-scripts, especially
+   run_ModSpec_functions
+   update data files in ModSpec-Matlab-API/test-data if necessary
+-------------------------------------------------------------------------------
+9. run MAPPtest and all tests we have, make sure nothings is broken
+   delete the comments written in ModSpecAPI.m in Step 1 now that the changes
+     to ModSpec API have been finished
+   update this list, especially names of additional devices in Step 4 and 6
+===============================================================================

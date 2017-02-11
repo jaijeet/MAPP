@@ -1,0 +1,149 @@
+
+This is MAPP-$version, the Berkeley Model and Algorithm Prototyping Platform.
+
+1. Using MAPP help system
+--------------------------
+The MAPP help system (this) can be invoked with "help MAPP" command.  This  lists all the help 
+topics available with MAPP help system. To get more details help on a particular topic that are
+listed in this help text, please type "help name-of-the-topic" after MATLAB prompt. For example, 
+if you want to get more detailed help about analysis algorithms available under A1oDAEAPI, type 
+"help analyses-algorithm".
+
+
+MAPP_quickstart      - This script guides users new to MAPP through a step-by-step process to perform transient
+                       analysis on an RC circuit in MAPP framework. Type "MAPP_quickstart" (without quotes) to run this
+                       interactive quickstart guide.  (TODO: We could add other circuit examples with different
+                       analysis as well)
+
+
+Examples and demos:
+-------------------
+You can directly run following examples and demos which demonstrates
+various analysis performed on different circuit DAEs, e.g., to do "AC
+analysis of a full wave rectifier circuit", type "run_fullWaveRectifier_AC"
+(without quotes). To get more detailed information about the script
+"run_fullWaveRectifier_AC", type "help run_fullWaveRectifier_AC" (without quotes)
+
+run_fullWaveRectifier_AC               - AC analysis of a full wave rectifier circuit
+run_fullWaveRectifier_DCsweep          - DC sweep on a full wave rectifier circuit
+run_fullWaveRectifier_transient        - Transient analysis on a full wave rectifier circuit
+run_inverter_DCsweep                   - DC sweep on an inverter circuit using Shichmann-Hodges (SH) model
+run_inverter_transient                 - Transient analysis on an inverter circuit using SH model 
+run_BJTdiffpair_DCsweep                - DC sweep on a differential pair using Ebers-Moll (EM) BJTs
+run_BJTdiffpair_AC                     - Run AC analysis on a differential pair using EM BJTs 
+run_BJTschmittTrigger_transient        - Run transient simulation on a BJT Schmitt trigger circuit
+run_inverterchain_transient            - Transient simulation on an inverter chain using SH CMOS model
+
+For more examples, type >>" help  analyses-demos" (without quotes).
+
+For some examples with detailed explanation of various steps, run the following examples:
+
+<Detailed-example: NOT SURE>
+
+Tutorials on developing compact models in MAPP:
+----------------------------------------------
+TODO:<Should we create an interactive guide for this too as done in "MAPP_quickstart.m"?> The new 
+"simulation-ready" compact models that are to be developed in MAPP environment should work robustly 
+during DC, AC and transient simulation.  <Insert-here-PURDUE-SPIN-TORQUE-MODEL-experience>
+
+Short video tutorials for MDE (with corresponding presentation slides and MATLAB code) are available at 
+
+http://<the-link-when-finalized>
+
+
+
+2. MAPP simulator fundamentals
+------------------------------
+DEVICE MODELS:
+        ModSpec-Device-Model      - Brief overview of device models and help regarding building 
+                                    simulation-ready compact models using ModSpec API
+
+        List of device models in ModSpec API:
+        LISTDEVICEMODEL
+
+CIRCUITS AND DAEs:
+        Circuits-as-DAE          - Brief overview of circuits as Differential Algebraic Equations (DAEs) 
+
+        List of circuits in DAEAPI:
+        LISTOFCIRCUITS
+
+ANALYSES AND ALGORITHMS:
+Three different kind of analyses are supported in the current version of MAPP: 
+     a) DC, 
+     b) AC and 
+     c) transient. 
+
+To get a brief overview of general analysis procedures on a circuit DAE,
+type "help Circuit-Analysis" (without quotes).
+
+        Circuit-Analyses        - General overview of circuit analysis fundamentals
+
+VECVALDER:
+VECVALDERREADME
+
+vecvalder shortcomings and workaround:
+
+
+
+
+3. ADVANCED MAPP HELP TOPICS:
+--------------------------------------------------------------------------------------------
+MAPP is organized in four directories: Ao1DAEAPI, DAEAPI, ModSpec and vecvalder.
+
+MAPP/A1oDAEAPI                       - Basic analyses (DC, AC, and transient) on circuits described by DAEAPI
+        |
+        |---> analyses-algorithms    - Algorithms for doing different analyses (for more, "help analyses-algorithms")
+        |
+        |---> test-scripts           - Scripts for doing different analyses on various circuits DAEs
+        |                              (for getting a complete list of available test scripts (demos), "help analyses-demos")
+        |
+        |---> usability-helpers      - Usability helper functions for MATLAB DAEAPI (for getting the complete list of available
+        |                              usability helper functions, "help analyses-uhelpers")
+        |
+        |---> utils                  - Utility functions for basis analyses on circuit DAEs (for getting the complete list of
+                                       available utility functions, "help analyses-utils")
+
+
+MAPP/DAEAPI                          - MATLAB API to describe circuits as nonlinear DAEs
+        |
+        |---> DAEs                   - Various circuits represented in MATLAB DAEAPI (to get a complete list, type
+        |                              "help DAEs")
+        |
+        |---> test-scripts           - NOT SURE IF THIS IS REQUIRED IN HELP SYSTEM
+        |
+        |---> device-model           - NOT SURE IF THIS IS REQUIRED IN HELP SYSTEM
+        |
+        |---> utils                  - Utility functions for creating DAEs (for getting the complete list of
+                                       available utility functions, "help analyses-utils")
+        
+MAPP/ModSpec                         - MATLAB API to describe compact models (for more, type "help ModSpec")
+        |
+        |---> device-models          - Various simulation-ready compact device models represented in MATLAB DAEAPI 
+        |                              (to get a complete list, type "help device-models")
+        |
+        |---> smoothingfuncs         - Various smoothing function to smooth model discontinuities (for a complete list of smoothing 
+        |                              functions, type "help smoothingfuncs")
+        |
+        |---> test-scripts           - MATLAB scripts to run tests on various ModSpec model and compare the output results 
+        |                              with previously stored test data (*.mat files) in /test-data directory
+        |
+        |---> test-data              - Directory with stored output data (*.mat files) for different tests on various ModSpec models
+        |
+        |---> utils                  - External utility functions used in creating a standard ModSpec model (for complete list, 
+        |                              type "help ModSpec-utils")
+
+
+MAPP/vecvalder                       - Package to perform automatic differentiation in MATLAB/Ocatave
+        |
+        |---> @vecvalder             - Various overloaded functions implemented in vecvalder package. This directory also includes
+        |                              the class definition file vevvalder.m. (for complete list of functions, type "help
+        |                              vecvalder-functions")
+        |
+        |---> tests                  - Various test scripts to compare derivative of different functions computed using  vecvalder 
+        |                              package (automatic differentiation) and symbolic differentiation for different functions.
+        |                              (for complete list, type  "help vecvalder-tests")
+        |
+        |---> utils                  - Utility functions for vecvalder package
+        
+        simulation-ready compact device models represented in MATLAB DAEAPI 
+

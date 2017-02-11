@@ -1,0 +1,13 @@
+simulator lang=spectre
+
+ahdl_include "hys.va"
+
+V1 (1 0) vsource dc=1 type=sine sinedc=0 ampl=0.7 freq=1k
+X1 (1 0) hys
+
+// DC analysis
+dc1 dc dev=V1 start=-1 stop=1 lin=100 
+dc2 dc dev=V1 start=1 stop=-1 lin=100 
+
+// transient simulation
+tran tran stop=2m 

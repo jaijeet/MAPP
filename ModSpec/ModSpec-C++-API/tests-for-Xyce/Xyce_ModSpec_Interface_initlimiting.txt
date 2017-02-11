@@ -1,0 +1,423 @@
+What we have written down is the init/limiting formula for SPICE, Xyce and MAPP.
+But those are for solving f(x) = 0 at the system level.
+
+At the device level, each device model normally stamps on the system-level f/q
+vector and df_dx/dq_dx matrix.
+
+Without init/limiting, once we've figured out what the system-level equations
+and unknowns are, such stamping can be easily done.
+
+With init/limiting, to use MAPP's notation, df_dx/dq_dx should really be df/q_dx
++ df/q_dxlim * xTOxlimMatrix(). Intuitively, this is just like directly
+replacing part of x with xlim when evaluating df_dx/dq_dx.
+At the device level, take dfe_dvecX as an example, in XMI, we can just do:
+dfe_dvecX = dfe_dvecX(vecX, vecY, vecLim, vecU) + dfe_dvecLim(vecX, vecY,
+vecLim, vecU) * vecXTOvecLimMatrix();
+where vecLim = vecLimInit when do_init, vecLim = limiting(vecX, vecY,
+vecLimOld, vecU) when do_limiting. Then in XMI, entries of dfe_dvecX are
+distributed into df_dx in Xyce normally, as if there is no init/limiting.
+
+In comparison, the evaluation of f/q in devices is a little trickier. Because
+SPICE calculates everything with RHS, Xyce keeps compatibility with it through
+a limiting correction step in its f/q function. This means, when do_limiting,
+in ModSpec devices,
+fe = fe(vecX, vecY, vecLim, vecU) + dfe_dvecLim(vecX, vecY, vecLim, vecU) *
+([vecX; vecY]*vecXYTOvecLimMatrix() - vecLim);
+where vecLim = limiting(vecX, vecY, vecLimOld, vecU). Then in XMI, entries of
+fe are stamped onto system-level f.
+What exatly happens when do_init is on is not entirely clear to me right now.
+
+In order to do init/limiting in XMI, the following changes have to be made to
+XMI:
+
+1. numbers of variables
+    - n: ModSpec quantity: half the number of IOs (ie, # of IOs = 2n)
+    - l: ModSpec quantity: number of explicitOutputs
+    - m: ModSpec quantity: number of InternalUnknowns == size of vecY
+    - l_v: Xyce_ModSpec_Interface quantity: # of explicit outputs of type 'v' (voltage branch). 0 <= l_v <= l.
+
+   add 
+    - nl: number of limited variables
+
+2. vecLim
+	- vecE are the n+1==numExtVars node voltages of the device's external nodes
+	- vecI are all the external branch current unknowns declared by Xyce for the element:
+	- vecY are ModSpec's vecY
+
+   add 
+	- vecLim are ModSpec's vecLim
+
+3. limited variable IDs
+   difficult, get it from Store vector ID
+
+   there are
+       stoLIDVecRef
+       stoLIDVec
+       extData.currStoVectorPtr)[li_storexx]
+       extData.nextStoVectorPtr)[li_storexx]
+
+
+4. relationships between vecEIY and limited variables  
+
+5. f/q functions
+     void compute_fq(/* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY, vector<double>& vecLim, bool do_init, bool do_limiting);
+
+6. derivatives
+     void compute_jac_fq( /* outputs */ spMatrix& jac_f, spMatrix& jac_q,
+
+         /* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY, vector<double>& vecLim, bool do_init, bool do_limiting, int stampsonly=0)    ;
+
+    void vecEIY_from_solVec(/* outputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY,
+                            /* inputs */ double* solVec);
+
+
+
+Forget about the logic for the moment! Just use do_init and do_limiting inside
+XMI.
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+The Logic:
+origFlag, offFlag
+
+	// set an initial condition if appropriate:
+	if (getSolverState().initJctFlag && !OFF && getDeviceOptions().voltageLimiterFlag)
+	{
+		// Tianshi: this is pretty much do_init = 1; vecLim = vecLimInit and evaluate fq.
+		// if IC_GIVEN, do something else (see BJT), but ModSpec devices don't support IC
+		if (getSolverState().inputOPFlag)
+		{
+			// If things are not solved (extData.flagSolVectorPtr[anything] == 0;), see N_DEV_MOSFET_B4,
+			// then initialize vecX, vecY to some numbers like 0.1, 0.11, Vth0, Vcrit
+			// origFlag = 0;
+		}
+		else
+		{
+			// initialize vecX, vecY to some numbers like 0.1, 0.11, Vth0
+			// origFlag = 0;
+		}
+	}
+	else if ((getSolverState().initFixFlag || getSolverState().initJctFlag) && OFF)
+	{
+		// vecX, vecY all zeros
+	}
+
+	if (getSolverState().newtonIter == 0)
+	{
+		if (!getSolverState().dcopFlag || (getSolverState().locaEnabledFlag && getSolverState().dcopFlag)) {
+		// ie, first newton step of a transient time step or DCOP continuation step.
+			stoVec = extData.currStoVectorRawPtr;
+			for (int i=0; i < XMIp->nl; i++) vecLimOld.push_back(stoVec[this->stoLIDVec[i]]);
+		}
+		else {
+		// no history
+			// vecLimOld = XMIp->ModSpecPtr->vecXYtoLimitedvarsMatrix ...
+			// do nothing, turn init/limiting off
+		}
+	} else {
+		stoVec = extData.nextStoVectorRawPtr;
+		for (int i=0; i < XMIp->nl; i++) vecLimOld.push_back(stoVec[this->stoLIDVec[i]]);
+	}
+
+	if (getDeviceOptions().voltageLimiterFlag && !(getSolverState().initFixFlag && OFF)) {
+		if (getSolverState().newtonIter >= 0 && !(getSolverState().initJctFlag)) {
+			do_limiting = true;
+		}
+	}
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+OBSOLETE below:
+
+// The logic inferred from N_DEV_Diode.C:
+
+vecLim = vecXYtoLim(vecX, vecY);
+
+if (getSolverState().newtonIter == 0)                                                                                                 
+{
+    if (getSolverState().initJctFlag && getDeviceOptions().voltageLimiterFlag)                                                        
+    {
+        vecLim = vecInit;                                                                                                             
+    }
+
+    vecLimOld = vecLim;
+
+    if (!(getSolverState().dcopFlag)||(getSolverState().locaEnabledFlag && getSolverState().dcopFlag))                                
+    {
+        vecLimOld = (extData.currStoVectorRawPtr)[indices];                                                                           
+    }                                                                                                                                 
+}
+else
+{                                                                                                                                     
+    vecLimOld = (extData.currStoVectorRawPtr)[indices];                                                                               
+}
+
+if (getDeviceOptions().voltageLimiterFlag && getSolverState().newtonIter >= 0)                                                        
+{
+    vecLim = limiting(vecLim, vecLimOld); 
+}
+
+if (getSolverState().newtonIter != 0 && getSolverState().newtonIter != newtonIterOld)                                                 
+{
+  newtonIterOld = getSolverState().newtonIter;                                                                                        
+}
+
+// TODO: N_DEV_BJT.C also involves initFixFlag for initialization
+
+// The equivalent logic:
+
+========================================================================
+
+What's inside SolverState:
+
+ - homotopy-related
+     void InitializeHomotopyBlockSize(int numBlocks);
+
+ - tran-related
+     double pdt;                // alpha/dt
+     double currTimeStep;
+     double lastTimeStep;
+     double currTime;
+     double finalTime;
+     double startingTimeStep;
+     double bpTol;
+     double acceptedTime; // for habanero
+     double currentOrder, usedOrder; // BNB, integration order for 2-level stamp
+     std::vector<double> timePoints;
+
+ - MPDE-related
+     double currFastTime;
+     double finalFastTime;
+     double currentHoldTime;  // this is the time the slow sources should use to evalulate
+     // their value during an MPDE initial condition (typically zero, but
+     // it can be anything).
+     bool   mpdeOnFlag;  // This indicates the MPDE phase of the problem (ie not initial condition)
+     bool   blockAnalysisFlag; // This indicates an MPDE/HB run.  This is true during both IC and MPDE/HB phase.
+
+ - output-related
+     bool forceFinalOutput;
+
+ - ???
+     bool   doubleDCOPEnabled;   // true if taking 2 DCOP steps for PDE sim.
+     int    doubleDCOPStep;      // 0 or 1.  (first or second "double" DCOP).
+
+ - globals
+     Globals globals_;
+    
+ - ???
+     int    timeStepNumber;
+
+ - ltra
+     // The following "ltra*" data structures are used to track time history for
+     // the LTRA device. It requires an independent time history because
+     // it can be compacted if the user specifies that option. With no
+     // compaction ltraTimeStepNumber will be equal to timeStepNumber+1.
+     size_t ltraTimeIndex;
+     size_t ltraTimeHistorySize;
+     mutable bool ltraDoCompact;
+     std::vector<double> ltraTimePoints;
+
+ - Newton-related
+     int    newtonIter;
+     int    stepLoopIter;
+     int    continuationStepNumber;
+     bool   firstContinuationParam;
+     bool   firstSolveComplete;
+    
+     bool initTranFlag;        // true only on very first(t=0) time step.
+     bool beginIntegrationFlag;// true if 1st time step out of breakpoint (incl. t=0)
+    
+     bool dcopFlag;         // true if we are in a DCOP calculation
+     //  (sweep, tranop or OP)
+     bool inputOPFlag;       // true if starting from a previous OP calculation
+
+     bool initJctFlag;  // true if on the first newton step of the
+     // first dcop solve of the first .STEP iteration.
+    
+     bool initFixFlag;  // true if DCOP solve, not first iteration *AND*
+     // any device not converged.  Allows "OFF" to be
+     // applied.
+    
+ - Analysis flags
+     bool transientFlag;    // true if transient analysis(even during tranop)
+     bool dcsweepFlag;      // true if DC Sweep or OP calculation.
+     bool tranopFlag;       // true if in dcop phase of transient sim.
+     bool acopFlag;         // true if in acop phase of ac sim.
+     bool PDESystemFlag;    // true if circuit includes a PDE device.
+    
+     bool locaEnabledFlag;  // true if LOCA is enabled for DCOP.
+
+ - Analysis flags
+     bool sweepSourceResetFlag;
+     bool debugTimeFlag;
+    
+     Nonlinear::TwoLevelNewtonMode twoLevelNewtonCouplingMode;
+    
+     // pde device BC homotopy/ two-level newton
+     double pdeAlpha;
+     bool PDEcontinuationFlag; // if true, continuation is being used.
+     mutable int  maxPDEContinuationSteps;
+     int  currPDEContinuationStep; // this may become obsolete...
+     int  prevPDEContinuationStep;
+    
+     bool chargeHomotopy;
+     double chargeAlpha;
+    
+     // mosfet homotopy variables:
+     bool artParameterFlag;
+     std::vector<double> gainScale;
+     double nltermScale;
+    
+     bool sizeParameterFlag;
+     double sizeScale;
+     double previousSizeScale;
+    
+     // BJT homotopy variables
+     bool bjtArtParameterFlag;
+    
+     // 2-level info:
+     N_TIA_TimeIntInfo tiInfo;
+     Nonlinear::NonLinInfo nlInfo;
+    
+ - Analysis options (for now bools that say what type of "." line was present in netlist)
+     bool ACspecified;
+     bool MORspecified;
+     bool TRANspecified;
+     bool DCspecified;
+     bool STEPspecified;
+     bool OPspecified;
+     bool MPDEspecified;
+     bool HBspecified;
+
+=============================================================================
+
+In this document, I'm trying to figure out what changes are required for
+Xyce_ModSpec_Interface to support init/limiting.
+
+First of all, as of 2015/06/20, ModSpec-C++-API is compatible with the MATLAB
+API in the public release, and it is working with Xyce_ModSpec_Interface. This
+is tested in Xyce-6.2, with resistor, diode, RLC, RLC2, MVS, etc.
+
+Also, since ModSpec API is backward compatible in terms of init/limiting, i.e.
+models with init/limiting support can be used without any knowledge of
+init/limiting. So Xyce_ModSpec_Interface, as it is right now, supports all
+ModSpec C++ models. But without init/limiting, convergence is not guaranteed.
+A few example I have now: simple diode model connected in series with vsrc and
+resistor is difficult to converge (with 100V vsrc, vd jumps from 0 to 33.333,
+then back to 0 after it fails, then finally uses a modified NR to converge);
+the first 15 points fail in DC analysis of MVS inverter (dc_inverter.cir).
+What I want to do now is update Xyce_ModSpec_Interface to access
+init/limiting-related fields of ModSpec and incorporate them into Xyce.
+Hopefully, the convergence issues with diode and MVS will go away.
+
+The real action of Xyce's devices happens in Instance::updateIntermediateVars.
+
+Initialization (xlimInit)
+
+    If getSolverState().newtonIter == 0
+
+    getDeviceOptions().voltageLimiterFlag
+
+    getSolverState().initJctFlag
+    getSolverState().inputOPFlag
+
+    InitCondGiven
+
+Limiting (xlimOld)
+
+1023   else  // just do this whenever it isn't the first iteration:
+1024   {
+1025     Vd_old = (extData.nextStoVectorRawPtr)[li_storevd];
+1026   }
+
+
+1028   // Voltage limiting based on mode of diode
+1029   //---------------------------------------
+1030   if (getDeviceOptions().voltageLimiterFlag)
+1031   {
+1032     int ichk = 0;
+1033 
+1034     if (getSolverState().newtonIter >= 0)
+1035     {
+1036       //Test if breakdown voltage given or not
+1037       if (model_.BVGiven && (Vd < Xycemin(0.0, -BV + 10.0 * Vte)))
+1038       {
+1039         double Vdtmp = -( BV + Vd );
+1040         Vdtmp = devSupport.pnjlim(Vdtmp, -(Vd_old+BV), Vte, tVcrit, &ichk);
+1041         Vd    = -(Vdtmp + BV);
+1042       }
+1043       else
+1044         Vd = devSupport.pnjlim(Vd, Vd_old, Vte, tVcrit, &ichk);
+1045 
+1046       if (ichk) origFlag = false;
+1047     }
+1048   }
+
+In Instance::loadDAEFVector:
+
+
+ 783 {
+ 784   // 3f5 compatible currents
+ 785   // Including derivation of Vd_diff and Limiting Correction
+ 786   //---------------------------------------------------------
+ 787   double Ir = Gspr * (Vp - Vpp);
+ 788 
+ 789   // load in the KCL for the positive node:
+ 790   double coef = -Ir;
+ 791   (extData.daeFVectorRawPtr)[li_Pos] -= coef;
+ 792 
+ 793   // load in the KCL for the negative node:
+ 794   coef = Id;
+ 795   (extData.daeFVectorRawPtr)[li_Neg] -= coef;
+ 796 
+ 797   // load in the KCL for the positive prime node:
+ 798   coef *= -1;
+ 799   coef += Ir;
+ 800   (extData.daeFVectorRawPtr)[li_Pri] -= coef;
+ 801 
+ 802   // load the voltage limiter vector.
+ 803   if( getDeviceOptions().voltageLimiterFlag )
+ 804   {
+ 805     double Vd_diff = Vd - Vd_orig;
+ 806     double Gd_Jdxp = 0.0;
+ 807     Gd_Jdxp = -( Gd ) * Vd_diff;
+ 808 
+ 809     // Load the dFdxdVp vector
+ 810     (extData.dFdxdVpVectorRawPtr)[li_Neg] += Gd_Jdxp;
+ 811     (extData.dFdxdVpVectorRawPtr)[li_Pri] -= Gd_Jdxp;
+ 812   }
+ 813 
+ 814   if( loadLeadCurrent )
+ 815   {
+ 816     (extData.nextStoVectorRawPtr)[li_store_dev_i] = Id;
+ 817   }
+ 818 
+ 819   return true;
+ 820 }
+
+In N_DEV_ModSpec's loadDAEFVector:
+ 852       double fi = XMIp->f[i];
+ 854       fVec[k] += fi;
+
+We should add:
+
+
+
+updateState, updatePrimaryState, getStoreNameMap
+registerStoreLIDs
+
+
+For XMI:
+    void compute_fq(/* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY);
+    void compute_jac_fq( /* outputs */ spMatrix& jac_f, spMatrix& jac_q, 
+        /* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY, int stampsonly=0);
+    void vecEIY_from_solVec(/* outputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY,
+                            /* inputs */ double* solVec);
+
+
+
+    void compute_fq(/* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY, vector<double>& vecSto);
+    void compute_jac_fq( /* outputs */ spMatrix& jac_f, spMatrix& jac_q, 
+        /* inputs */ vector<double>& vecE, vector<double>& vecI, vector<double>& vecY, int stampsonly=0);
+

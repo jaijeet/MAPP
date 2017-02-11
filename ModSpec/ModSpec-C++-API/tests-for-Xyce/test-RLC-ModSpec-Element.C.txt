@@ -1,0 +1,97 @@
+
+From RLC_ModSpec_Element.C:
+
+/* 
+ * the device: a 3-terminal element with RLC elements inside it
+ * the idea is to replicate the exact device I put into Xyce.
+ *
+ * topology:
+ * - the external nodes are 1, 2, and 3. 3 is the reference node.
+ * - between nodes 1 and 2, there is a resistor R
+ * - between nodes 2 and 3, there are a capacitor C and an inductor L in series
+ *
+ * unknowns:
+ * 	n = 2, 2n = 4
+ * 	NIL.NodeNames = "n1", "n2"
+ * 	NIL.RefNodeName = "n3"
+ * 	[IOnames = "vn1n3", "vn2n3", "in1n3", "in2n3"]
+ * 	l = 2
+ * 	ExplicitIOnames = "in1n3", "in2n3"
+ * 		=> vecZ = [i13; i23];
+ * 	[OtherIOnames = "vn1n3", "vn2n3"]
+ * 		=> vecX = [vn1n3; vn2n3]
+ * 	m = 2
+ * 	InternalUnkNames = "vL", "iL" (vL is the drop across the inductor)
+ * 		=> vecY = [vL; iL]
+ * 	ImplicitEquationNames = "LBCR", "intKCL"
+ * 		=> vecW = [LBCR_residual, intKCL_residual]
+ *
+ * equations:
+ * 	ExplicitOutputs vecZ:
+ * 	i13 = (v13-v23)/R = (e1-e2)/R
+ * 	i23 = -(v13-v23)/R + d/dt [C (e2-e3-vL)]
+ *
+ * 	ImplicitEquations vecW:
+ * 	LBCR: L diL/dt - vL = 0
+ * 	intKCL: - d/dt[C (e2-e3-vL)] + iL = 0
+ *
+ * parameters:
+ * 	R, L and C.
+*/
+
+Equation formulation for Xyce:
+
+1. vecE, vecI and vecY (inputs to the device):
+
+   vecE = [e1; e2; e3];
+   vecI = []; // no branch voltage explicit outputs
+   vecY = [vL; iL];
+
+2. vecX and vecY
+   vecX = [v13; v23] = [1 0 -1; 0 1 -1] * vecE
+   vecY: as above
+
+3. vecZ and vecW
+   vecZ = [i13; i23] = [(v13-v23)/R; -(v13-v23)/R + d/dt (C (v23-vL))]
+   vecW = [LBCR; intKCL] = [L diL/dt - vL; - d/dt[C (v23-vL)] + iL]
+
+4. f and q for Xyce = [KCLs; KVLs; vecW] (the equations of the device)
+
+   KCLs:
+	n1 KCL: += i13 = ((e1-e3)-(e2-e3))/R. Stamps: Jf: [1 -1 0 | 0 0]; Jq: [0 0 0 | 0 0]
+	n2 KCL: += i23 = -(e1-e2)/R + d/dt (C * e2-e3-vL). Stamps: Jf: [-1 1 0 | 0 0];  Jq: [0 1 -1 | -1 0]
+	n3 KCL: += -(i13-i23). Stamps: Jf: [-1 1 0 | 0 0];  Jq: [0 1 -1 | -1 0]
+
+   KVLs: none
+
+   vecW: as above
+   	LBCR:	L diL/dt - vL. 	Stamps: Jf: [0 0 0 | -1 0]; Jq: [0 0 0 | 0 1]
+	intKCL:	- d/dt[C (v23-vL)] + iL. Stamps: Jf: [0 0 0 | 0 1]; Jq: [0 1 -1 | -1 0]
+
+   CHECKING HAND-CALCULATED STAMPS AGAINST Xyce_ModSpec_Interface
+   Hand-calculated overall stamp from above:
+   	Jf:
+		[1 1 0 | 0 0
+		 1 1 0 | 0 0
+		 1 1 0 | 0 0
+		 -----------
+		 0 0 0 | 1 0
+		 0 0 0 | 0 1]
+
+	
+
+	Xyce_ModSpec_Interface setup reports:  jac_f = [5,5]((1,1,2,0,0),(1,1,2,0,0),(2,2,4,0,0),(0,0,0,1,0),(0,0,0,0,1))
+                                                                  ^           ^           ^
+							(these are OK because v12 is computed as v13-v23)
+
+
+   Hand-calculated overall stamp from above:
+	Jq: 	[0 0 0 | 0 0
+		 0 1 1 | 1 0
+		 0 1 1 | 1 0
+		 -----------
+		 0 0 0 | 0 1
+		 0 1 1 | 1 0]
+
+	Xyce_ModSpec_Interface setup reports: jac_q = [5,5]((0,0,0,0,0),(0,1,1,1,0),(0,1,1,1,0),(0,0,0,0,1),(0,1,1,1,0))
+	(the above matches)

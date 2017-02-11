@@ -1,0 +1,290 @@
+Test automation on A1oDAEAPI:
+
+2013, July 5th
+--------------
+1. Basic structure of tests:
+   -- Desired usage (The way use see it)
+      FOR TESTING: The user runs "run_ALL_tests_on_A1oDAE". This script in turn runs 
+
+       -----------------------------------------------------------
+        -- run_ALL_DCsweep_tests_on_A1oDAEAPI('rDAEtest','update')
+       -----------------------------------------------------------
+           Arguments are optionnal. However, if arguments are present, the
+           following action, takesplace. 
+
+           rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+           update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+           The followings are stored in the .mat file for a particular
+           test-script
+
+           This runs the test-scripts with only DC sweep. Currently, following
+           files need to be included in this.
+
+              (1). run_BJTdiffpair_DCsweep.m
+              (2). run_BJTdiffpairSchmittTrigger_DCsweep.m
+              (3). run_BJTschmittTrigger_DCsweep.m
+              (4). run_fullWaveRectifier_DCsweep.m
+              (5). run_inverterchain_DCsweep.m
+              (6). run_inverter_DCsweep.m
+              (7). run_reducedRRE_DC.m
+              (8). run_reducedRRE_QSS.m
+              (9). run_vsrc_xgate_res_QSS.m
+             (10). test_MNAEqnEngine_DAAV6_char_curves.m
+             (11). test_MNAEqnEngine_MVS_char_curves.m
+             (12). test_MNAEqnEngine_MVS_no_int_nodes_char_curves.m
+
+             Save the following variables, if creating the database, else
+             compare the parameters of the test-script with its counterpart in
+             ref data in the database (function compare_parm).
+
+                           NRparms.maxiter
+                           NRparms.reltol
+             NRparms       NRparms.abstol
+                           NRparms.residualtol
+                           NRparms.limiting
+                           NRparms.dbglvl      % DO NOT CARE ABOUT IT
+
+                           The value of NRparms may be default value or might be
+                           set in the test-script.
+
+             initguess     If initial guess provided, then save it. If not, then compare/save the
+                           QSSObj.DAE.QSSinitGuess
+
+             N             # of sweeping steps
+
+             inputs        These values are gathered from DAE.get_uQSS  
+
+              -- If compare_parms() return 0, then abort and ask the user to run
+                 update, so that new database files are created using the new
+                 parms values.
+
+              -- Then run DC sweep (through a loop) and save the StateOutputs in
+                 step of the loop.
+
+                  outs = StateOutput(DAE);  
+
+                   -- If the standard practice of using previous step solution
+                      next step initial conditions is not followed, then during
+                      each step of the rule, save the initial conditions 
+
+              -- Once the simulation is complete, then if (update), save the
+                 "outs"; or (if test), then compare the outputs using function
+                 compare_outputs(). The function compare_outputs should use a
+                 root-mean-square type of criterion to check if the output array
+                 is sufficiently close to ref output array. If not, more
+                 information provided to the user (e.g., at what value of input
+                 the DC sweep failed);
+
+        --------------------------------------------------------------------------
+        -- run_ALL_trans_tests_on_A1oDAEAPI('rDAEtest','update')
+        --------------------------------------------------------------------------
+
+            Arguments are optionnal. However, if arguments are present, the
+            following action, takesplace. 
+
+            rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+            update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+            The followings are stored in the .mat file for a particular
+            test-script
+
+
+            Params:
+
+
+             Initial Value:                 Check if initial values of existing
+                                            data is same as that being used in
+                                            the transient simulation. If QSS is
+                                            used to determine the intial
+                                            condition, then go to previous
+                                            example (with N=1).
+             tstart, tstop, and tstep
+
+             TRmethods.XXXX                 The second argument of LMS call*
+             
+             LMStransparm                   The third argument of LMS call*
+
+             * This should be the final TransObj before runign simulation.
+               Sometimes, if you are intereted in using an LMS method other than
+               Backward Euler, then there may be more than one LMS call. So,
+               this should be the final LMS call.
+
+             # Also, add text saying what happens if any of the usability helper
+               functions (e.g., run_transient_GEAR2) are called. Ans: Nothing much, should be
+               straight-forward as no usability-helper functions call.
+
+              -- If ~update, then call function compare_parms(). If
+                 compare_parms() return 0, then abort and ask the user to run
+                 update, so that new database files are created using the new
+                 parms values.
+
+              -- Once the simulation is complete, then if (update), save the
+                 "outs"; or (if test), then compare the outputs using function
+                 compare_outputs(). The function compare_outputs should use a
+                 root-mean-square type of criterion to check if the StateOutput
+                 array is sufficiently close to ref StateOutput array. If not,
+                 more information provided to the user (e.g., plot the different
+                 StateOutput on a single figure to show how both looks visually
+                 and let the user decide what happened)
+
+           This runs the test-scripts with only transient analysis
+
+              (1). run_BJTdiffpairRelaxationOsc_transient.m
+              (2). run_BJTdiffpairSchmittTrigger_transient.m
+              (3). run_BJTdiffpair_transient.m
+              (4). run_BJTschmittTrigger_transient.m
+              (5). run_coupledRCdiodeSpringsMasses_transient.m
+              (6). run_DAAV6_ringosc_spice_netlist_transient.m
+              (7). run_fullWaveRectifier_transient.m
+              (8). run_inverterchain_transient.m
+              (9). run_inverter_transient.m
+             (10). run_parallelLC_transient.m
+             (11). run_parallelRLCdiode_transient.m
+             (12). run_parallelRLC_transient.m
+             (13). run_RCline_transient.m
+             (14). run_resVsrcDiodeRLC_transient.m
+             (15). run_tworeactionchain_transient.m
+             (16). run_UltraSimplePLL_transient.m
+             (17). test_AtoB_RRE_transient.m
+             (18). test_BSIM3_ringosc_transient.m
+             (19). test_connectCktsAtNodes_w_RLCseries_transient.m
+             (20). test_MNAEqnEngine_DAAV6_ringosc_tran.m
+             (21). test_MNAEqnEngine_MVS_no_int_nodes_ringosc_tran.m
+             (22). test_SoloveichikABCosc_RRE_transient.m
+             (23). test_SoloveichikABCoscStabilized_RRE_transient.m 
+
+        -----------------------------------------------------------------------
+        -- run_ALL_tran_tests_on_A1oDAEAPI('rDAEtest','update') 
+        -----------------------------------------------------------------------
+
+            Arguments are optionnal. However, if arguments are present, the
+            following action, takesplace. 
+
+            rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+            update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+            The followings are stored in the .mat file for a particular
+            test-script
+
+
+            Params:
+
+             DC Operating point(input)     The DC operating point at which AC
+                                           analysis to be conducted. Could be
+                                           more than one. 
+
+             NRparms+NRinitguess           For each operating point + NR
+                                           solution at those OP
+
+             fstart, fstop, and fstep
+
+             LTIObj.solution             LTISSS solution
+
+           This runs the test-scripts with only AC analysis
+           
+              (1). run_BJTdiffpair_AC.m
+              (2). run_fullWaveRectifier_AC.m
+              (3). run_RCline_AC.m
+              (4). test_MNAEqnEngine_DAAV6_P_N_AC.m
+
+
+
+        -- run_ALL_misc_tests_on_A1oDAEAPI    
+           This runs the test-scripts with various test combination. There are
+           test-script which does all the three analysis. Do not need to write
+           three test-scripts for those. This will take care of them.
+
+              (1). run_threeStageRingOsc_QSS_transient.m
+              (2). test_MNAEqnEngine_resistive_divider_DC_tran.m
+              (3). test_MNAEqnEngine_vsrc_diode_DC_AC_tran.m
+              (4). test_MNAEqnEngine_vsrcRC_DC_AC_tran.m
+              (5). test_MNAEqnEngine_vsrcRCL_DC_AC_tran.m
+              (6). test_SoloveichikABCoscStabilized_RRE_transient.m 
+
+           
+
+
+
+
+              1. ALL_DC_tests.m
+              2. ALL_LTInoise_tests.m
+              3. ALL_misc_tests.m
+              4. ALL_QSSsens_tests.m
+              5. ALL_transient_tests.m
+              6. run_ALL_A1oDAEAPI_tests.m
+              7. run_ALL_A1oDAEAPI_tests_old.m
+              8. run_BJTdiffpair_AC.m
+              9. run_BJTdiffpair_DCsweep.m
+             10. run_BJTdiffpairRelaxationOsc_transient.m
+             11. run_BJTdiffpairSchmittTrigger_DCsweep.m
+             12. run_BJTdiffpairSchmittTrigger_transient.m
+             13. run_BJTdiffpair_transient.m
+             14. run_BJTschmittTrigger_DCsweep.m
+             15. run_BJTschmittTrigger_transient.m
+             16. run_coupledRCdiodeSpringsMasses_transient.m
+             17. run_DAAV6_ringosc_spice_netlist_transient.m
+             18. run_fullWaveRectifier_AC.m
+             19. run_fullWaveRectifier_DCsweep.m
+             20. run_fullWaveRectifier_transient.m
+             21. run_inverterchain_DCsweep.m
+             22. run_inverterchain_QSSsens.m
+             23. run_inverterchain_transient.m
+             24. run_inverter_DCsweep.m
+             25. run_inverter_transient.m
+             26. run_parallelLC_transient.m
+             27. run_parallelRLCdiode_transient.m
+             28. run_parallelRLC_transient.m
+             29. run_RCline_AC.m
+             30. run_RCline_LTInoise.m
+             31. run_RCline_transient.m
+             32. run_reducedRRE_DC.m
+             33. run_reducedRRE_QSS.m
+             34. run_resVsrcDiodeRLC_transient.m
+             35. run_threeStageRingOsc_QSS_transient.m
+             36. run_tworeactionchain_transient.m
+             37. run_UltraSimplePLL_transient.m
+             38. run_vsrc_xgate_res_QSS.m
+             39. test_AtoB_RRE_transient.m
+             40. test_BSIM3_ringosc_transient.m
+             41. test_connectCktsAtNodes_w_RLCseries_transient.m
+             42. test_MNAEqnEngine_DAAV6_char_curves.m
+             43. test_MNAEqnEngine_DAAV6_P_N_AC.m
+             44. test_MNAEqnEngine_DAAV6_ringosc_tran.m
+             45. test_MNAEqnEngine_MVS_char_curves.m
+             46. test_MNAEqnEngine_MVS_no_int_nodes_char_curves.m
+             47. test_MNAEqnEngine_MVS_no_int_nodes_ringosc_tran.m
+             48. test_MNAEqnEngine_resistive_divider_DC_tran.m
+             49. test_MNAEqnEngine_vsrc_diode_DC_AC_tran.m
+             50. test_MNAEqnEngine_vsrcRC_DC_AC_tran.m
+             51. test_MNAEqnEngine_vsrcRCL_DC_AC_tran.m
+             52. test_NR_gJsinglefunc.m
+             53. test_SoloveichikABCosc_RRE_transient.m
+             54. test_SoloveichikABCoscStabilized_RRE_transient.m 

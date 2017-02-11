@@ -1,0 +1,78 @@
+HOW TO RUN THE CODE:
+
+- run the MATLAB script file "run_DCSweep_for_MOS_Inverter" like this:
+
+       >> run_DCSweep_for_MOS_Inverter
+
+- The script asks which version of inverter DAE to use for generating DC
+  sweep curve. Option (A), which is the default option, runs the
+  inverter DAE implementation with one unknowns (Vout; reduced MNA
+  equations); whereas option (b) uses the DAE implementation with five
+  unknowns (MNA equations)
+
+CIRCUIT DIAGRAM
+
+
+
+   NMOS-PMOS INVERTER        +Vdd 
+                              | | <--- I_VDD
+      +----------------------||||----------++ Node 3 (e_VDD)
+      |                       | |+         ||       
+      |                                    ||       A 
+      |                                    || PMOS  |
+      |                         || source  ||       | IDS_P
+      |                  gate   |+---------+|       |
+      |                +-------O|+----------+ bulk  |
+      |                | ---->  |+---------+
+      |     Vin        | IGS_P  || drain   |   
+      |                |                   |   
+      |       | | +    |                   |  
+      +------||||------+ Node 1 (e_IN)     +---------O  (Vout)
+      |       | | <--- |                   | Node 2 (e_OUT)
+      |          I_VIN |                   |        
+      |                | ---->  || drain   |        |
+      |                | IGS_N  |+---------+        | IDS_N
+      |                +--------|+----------+ bulk  |
+      |                  gate   |+---------+|       V
+      |                         ||  source ||
+      |                                    || NMOS
+      |                                    ||
+      +------------------------------------||
+                                           ||
+                                         --++--
+                                          ----   Ground
+                                           --
+
+
+
+WHAT DOES THE CODE DO?
+- Find out corresponding VOUTS by sweeping through VINS=0:increment:Vdd 
+- For option (A)
+
+        - In first step, Vin=VINS(1)=0 and initial value of Vout is
+          chosen to be Vout_init=Vdd
+
+        - In kth step, Vin=VINS(k) and initial value of Vout is chosen
+          to be Vout_init=VOUTS(k-1) 
+
+        - WHAT RESULTS TO EXPECT?
+
+          The code with option (A) runs as expected till Vin ~= Vdd/2,
+          using above initialization routine (using previous solution as
+          the initial condition for current NR step). However, when Vin
+          ~= Vdd/2, it can be seen such an initialization causes problem
+          in the sense that [Vin(k), VOUTS(k-1)] causes both MOSFETs to
+          turn off and df_dx becomes zero.  Therefore, with such an an
+          initial condition, the NR cannot proceed anymore. To proceed,
+          a different initial condition needs to be used.
+
+          As such, it is neither a problem of NR or the way DAE is
+          implemented.  However, from a Tutorial# 2 point-of-view, where
+          the aim is to introduce the students/listeners what they can
+          do with DAE (rather than introducing various aspects of NR,
+          in general), it is desired that the NR should work without any
+          so-called "hacks".
+
+- Option (b) works
+
+

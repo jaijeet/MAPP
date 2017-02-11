@@ -1,0 +1,30 @@
+================================================================================
+Observations from diff
+
+1. added license
+2. module name changed to  "mvs_si_1_0_1"
+3. parms:
+	- version changed to 1.01
+	- tipe changed to type
+	- added parameter real Tjun = 298 from [173:inf); // Junction temperature [K]
+	- removed parameter real phit = 0.0256; // Thermal voltage, kT/q [V]
+4. added "real phit"
+   removed "real Vdsatq"
+   removed "real dibl"
+   removed "real Qx, Qy" 
+5. psis: memory state is fixed by moving 
+	a		=	1.0 + gamma/ ( 2.0 * sqrt( abs( psis - ( Vbsi ))));
+	to a position after psis is initialized
+
+
+================================================================================
+"Updates in version 1.0.1" from nanoHUB
+
+1) Module name changed to mvs_si_1_0_1 to match with the file name mvs_si_1_0_1.va
+2) Parameter tipe changed to type
+3) External parameter phit has been eliminated. Instead junction temperature Tjun has been added. 
+4) UNCOMMENT flag added in files: model_exercise.m, extract_main.m, optimize_transfer.m, optimize_output.m 
+5) Indentation in Verilog-A fixed.
+4) Surface potential psis initialized properly in Verilog-A implementation.
+5) Parameters Qx, Qy, S, Vsatq, dibl, Vgd, Vgdi, qe are removed in Verilog-A implementation.
+6) LICENSE.txt file added.

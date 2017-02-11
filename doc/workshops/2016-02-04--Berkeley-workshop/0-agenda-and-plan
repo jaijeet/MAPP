@@ -1,0 +1,324 @@
+TODAY todos:
+- MAPP and VAPP releases
+- point them to earlier video and materials, ask them to look through parts
+  of it first
+- email to everybody
+-------------------------------------------
+
+
+Verilog-A and Multi-Physics Models in MAPP: A Hands-On Workshop
+
+                       8am-6pm
+                Thursday, Feb 4, 2015
+
+         University of California, Berkeley
+             Hughes Room, 400 Cory Hall
+                 Berkeley, CA 94720
+
+
+Berkeley's Model and Algorithm Prototyping Platform (MAPP) is a MATLAB-based
+platform that provides a complete environment for developing, testing,
+experimentally validating and inserting compact models in open source
+simulation platforms.  It is also useful for prototyping new simulation
+algorithms.
+
+This hands-on workshop will focus on the newly developed Verilog-A to ModSpec
+device model translator for MAPP, dubbed VAPP (Verilog-A Parser and
+Processor). The goal of the workshop is to illustrate how MAPP facilitates the
+development of simulation ready compact models. An overview of MAPP's
+multi-physics modelling and simulation capabilities will also be provided.
+A hands-on refresher on MAPP will be provided for those who have no prior
+experience with it. 
+
+Please bring your laptop (running linux, OSX or Windows). It would be very
+helpful if you already have MATLAB installed and running on your laptop;
+otherwise you may need to access the hands-on components through the web.
+
+For more information about MAPP, see:  https://nanohub.org/groups/needs/mapp
+
+TO REGISTER FOR THE MAPP WORKSHOP:  https://xxx
+
+8:00AM        Coffee, juice, and rolls
+
+8:30AM        Introduction to NEEDS, MAPP and VAPP (Mark Lundstrom and Jaijeet
+                                                              Roychowdhury)
+
+9:00AM        VAlint/VAPP/MAPP setup (Gokcen Mahmutoglu, Xufeng Wang, Tianshi
+                               Wang, Archit Gupta, Jaijeet Roychowdhury)
+
+              Participants will set up and test VAlint, VAPP and MAPP on their 
+              laptops.
+
+9:30AM        Hands on MAPP refresher (Tianshi Wang)
+
+              The presenter will outline the capabilities and features of 
+              MAPP/ModSpec and guide participants in using them to model simple 
+              devices and simulate small circuits using MAPP's DC, and 
+              transient analyses.
+              - recap: how to start
+                - model_starter() - quickly get something working, refresh
+                  people's motor memory (typing, etc.). 
+                  - resistor first in model_starter
+                    - will need to explain d/dt qe anyway here
+                    - then the "theory slide" on the resistor
+                    - then the Verilog-A code 
+                    - model exerciser
+                  - diode w capacitor in model_starter
+                    - theory slide w d/dt
+                    - limexp/safeexp
+                      - parameters (not in Verilog-A)
+                    - then the Verilog-A code (and forward ref Gokcen)
+                    - model exerciser
+                  - Shichman-Hodges (3- terminal) without internal nodes
+                    - no model starter - just give them the wrapper code
+                    - show the Verilog-A
+                    - model exerciser - char curves
+              --------------------------------------------------------
+                - circuit example in MAPP: resistor/diode/cap
+                  - give them the netlist in MAPP
+                  - dc, ac, transient in MAPP
+                - circuit example: SH with RC load
+                  - give them the netlist (just use capModSpec)
+                    - tell them about help MAPPdevices over here
+                  - DC/AC/transient - just in MAPP
+                  - netlist in Xyce, run in Xyce (questions -> Tom)
+              --------------------------------------------------------
+                - (we could stop the hands-on part here if needed, doing the
+                   rest as a demo)
+              --------------------------------------------------------
+                - the rest of the "theory" slides, illustated using RRAM
+                  template
+                  - implicit equations (together with explicit outputs)
+                    - motivation using FEFET curve (forward ref to Gokcen)
+                    - implicit resistor - no hands on, just show it and run it
+                    - model exerciser
+                  - internal unks and equations (m of them; vecy)
+                    - here, move to RRAM template
+                    - first show the theory slide, count 
+                    - then show the RRAM template eqns (both) - simple f1/f2
+                      functions
+                      - internal unk s and corresponding extra eqn (which is
+                        implicit)
+                      - plus an explicit output equation
+                    - model exerciser
+                    - Verilog-A version (explain, including inelegance
+                                        compared to ModSpec, tolerances of
+                                        node voltages in simulators, etc.; so
+                                        you need to scale it to around 1 -
+                                        Stanford model has a gap of 1e-9)
+                      - external nodes p, n
+                      - declare an internal node sn, branch sb = (sn, n)
+                      - s = 1e-9*v(sb) # scaling
+                      - i(sb) <+ SOMEOTHERSCALE*f2(vpn, s)
+                      - i(sb) <+ SOMEOTHERSCALE*ddt(-s)
+                      - i(pn) <+ f1(vpn, s)
+                  - uSrcs
+                    - motivating example: vsrc/isrc, RRAM (eg, Monte-Carlo
+                      noise contribution)
+                    - no support in model starter yet (because of low use)
+                    - advanced feature: just put it in the wrapper code
+                      directly, following examples
+                    - here's an example: simple RTN noise model in the filament:
+                      - i(pn) <+ f1(vpn, s) + un1(t) # RTN
+                      - i(sb) <+ SOMEOTHERSCALE*ddt(-s) + un2(t) # Stanford
+                    - Verilog-A does not currently support this, but we will 
+                      and propose this as an extension
+              --------------------------------------------------------
+              - finally, the RRAM
+                - first, the physical explanation: especially of the
+                  length/gap under +ve and -ve DC excitations (the "physics")
+                - then, f1 and f2 for a RRAM model (as an example)
+                  - with attribution: f1 from Stanford, f2 from Michigan
+                - then run a small circuit with it in MAPP (series w resistor,
+                  has hysteresis in transient)
+                  - do also a DC sweep and homotopy; AC not interesting now,
+                    LTV AC would be better
+                - make an oscillator with it and show
+                - then run the Verilog-A in Xyce
+
+              - Verilog-A vs Modspec, if the issue comes up
+                - ModSpec transparency vs Verilog-A
+                  - show Lan Wei example (have it at hand)
+                    - confusion wrt implicit equations; undeclared
+                      or un-initialized variables
+              - RRAM
+                - 
+
+10:15AM       Break
+ 
+10:25AM       Hands on MAPP refresher (contd., Tianshi Wang)
+
+12:00PM       Working lunch (presentation/demo by Tianshi Wang)
+              
+              During lunch, the presenter will outline and demonstrate MAPP's 
+              multi-physics modelling and simulation capabilities, using 
+              opto-electronics and spintronics examples.
+
+              - 2m gloss on optical stuff - show previous slides and then
+                move on to spintronic
+              - 2m mention what you have already that kind of works: thermal,
+                spintronic, optical, RRE, magnetics (MMFs, magnetic flux), 
+                mechanical (1-d kinematic - spring mass, and kinematic_v)
+              - focus on spintronic
+                - CPP spin switch: FM-NM-FM sandwich - two-terminal device/circuit
+                  - show the schematic
+                  - the electrical interface: regular (focus on KCL)
+                    - including for a 2-t device; iin = iout
+                  - the spin component (3-vector) interface
+                    - 2t device: no relationship between spinin and spinout
+                  - spin connections:
+                    - ee: standard
+                    - spin: basically 3-KCL, and 3-KVL (node voltages)
+                    - magnetic moment: 3-vector: equality constraints (no summation)
+                  - show the matrix equations for a ferromagnet
+                    - I1_4vec = M^-1 * Gs * M * V1_4vec + M^-1 * Gser * M * (V1_4vec - V2_4vec)
+                    - I2_4vec = M^-1 * Gs * M * V2_4vec + M^-1 * Gser * M * (V2_4vec - V1_4vec)
+                    - nonlinear because of rotation
+                  - no dynamics yet - (because LLG not implemented)
+                    
+
+1:30PM        Hands on tutorial on using VAlint/VAPP/MAPP for device
+              model development (Gokcen Mahmutoglu and Xufeng Wang)
+
+              The presenters will guide participants in using VAlint, VAPP and
+              MAPP to develop/refine simple compact models in Verilog-A: 
+              starting with checking the Verilog-A model using VAlint, then
+              translating to ModSpec using VAPP, using MAPP to see
+              characteristic curves, and finally, simulating small circuits
+              using MAPP's DC, AC and transient analyses. Good modelling
+              practices will be discussed and demonstrated.
+
+              - Gokcen has a nice cheatsheet already ready:
+                - start with slides in LibreOffice - outlining or reminding
+                  them the general flow
+                  - JR to send Gokcen an updated version of the flow
+                - first install/test VAPP
+                - quickly run something (FEFET) to completion (analysis) using
+                  VAPP and MAPP 
+                - work through a diode example (typing some Verilog-A in)
+                  - also see the ModSpec produced
+                  - upto running ckt in MAPP
+                    - char curves, transient that goes on forever, then add an
+                      internal resistor and/or limexp
+                - go back to the FEFET
+                  - slides/xournal on the neg cap model and the QV curve
+                    - also through VAPP + model exerciser
+              - BSIM3 example (not hands on, necessarily)
+              - BSIM4 example
+                - explaining why it doesn't work yet, and what will never
+                  work (simulation directives, other stuff)
+              - Xufeng and VAlint demo at the end, together with:
+                - really finally, mention some guidelines (eg for Verilog-A)
+                  - DO use branches
+                  - DECLARE/INITIALISE all variables
+                    - even if you want it set to 0; don't be lazy 
+                  - VERILOG-A: understand well what I(br) <+ f(Ibr)
+                    - Tianshi has some slides from long ago (ask for Purdue
+                      tutorial)
+                    - know hacks for doing 0 = f(...) equations
+                  - no implicit global ground (declare an extra terminal if
+                    necessary)
+                  - NO SIMULATION DIRECTIVES (model should work and be
+                    consistent for all analyses, present past and future)
+                  - NEVER idt
+                  - NEVER any time-varying or random function
+                    - though we understand that commercial simulators currently
+                      don't have usrc support, so this is difficult
+              --------------------------------------------------------
+
+              LIST OF THINGS TO WORRY ABOUT LATER
+              -----------------------------------
+              - MAPP public release
+              - Xufeng: using VAPP for error processing
+              - Tom Russo: using VAPP for something?
+              - C++ ModSpec for Sandia and our efficiency (recall make
+                                                    menuconfig plan for MAPP)
+              - VAPPtest
+              - auto-generate derivative code, removing need for vecvalder
+                for models in Verilog-A
+              - Octave compatibility of VAPP
+                - hash tables for efficiency
+                - some class things?
+                - must decide in conjunction with John Eaton
+                - maybe ask him to support python-like indexing for multi-d
+                  arrays
+              - modules/hierarchy support in Verilog-A
+                - will this depend on modules/hierarchy/netlist support within ModSpec?
+
+2:45PM        Coffee Break
+
+3:00PM        VAlint/VAPP/MAPP (contd.)
+
+4:30PM        Break
+
+4:45PM        Open QA/discussion session
+             - also spillover time if previous activities run over
+
+5:45PM        Wrap up
+ 
+6:00PM        Adjourn
+
+
+
+
+
+
+
+-------------------------------------------------------------------------------
+
+Old Tentative Agenda: 
+----------------
+
+8:00AM        Coffee, juice, and rolls
+
+8:30AM        Introduction to NEEDS and MAPP (Mark Lundstrom and Jaijeet 
+                                                                Roychowdhury)
+
+9:00AM        Hands-on tutorial on VAlint/VAPP and their use (Gokcen
+                Mahmutoglu and Xufeng Wang)
+
+              The presenters will guide participants in using VAlint and
+              MAPP to develop a simple compact model in Verilog-A: checking
+              the Verilog-A model using VAlint, translating to ModSpec using
+              VAPP, using MAPP to see characteristic curves, and simulating
+              small circuits in DC, AC and transient analyses. Good modelling
+              practices will be discussed and demonstrated.
+
+10:15AM       Break
+
+10:25AM       VAPP and its use (contd., Gokcen Mahmutoglu)
+
+12:00PM       Working lunch (presentation by Tianshi Wang)
+
+              Tianshi will show how NEEDS and VAPP will enable model developers
+              to simulate their Verilog-A models in Sandia's open source
+              circuit simulator Xyce. Recent progress will be demonstrated and
+              future plans will be discussed.
+
+1:30PM        Hands on tutorial on multi-physics modelling and simulation
+              using MAPP (Tianshi Wang)
+              
+              A unique feature of MAPP is the ability to customize it to
+              support devices and networks in domains beyond electronics.  The
+              presenter will guide participants in modelling
+              spintronic/opto-electronic devices, connecting them in circuit
+              netlists and simulating them using DC, AC and transient
+              analyses.
+
+2:45PM        Coffee Break
+
+3:00PM        Multi-physics modelling and simulation (contd., Tianshi Wang)
+
+4:15PM        Break
+
+4:30PM        Hands-on tutorial on using homotopy in MAPP to characterize
+              FE-FETs (Gokcen Mahmutoglu and Jaijeet Roychowdhury)
+
+              Negative differential capacitance in ferro-electric FETs leads
+              multiple possible drain currents for some values of bias, i.e.,
+              DC characteristic curves feature "folds" or "turning points".
+              The presenters will guide participants in using the
+              homotopy/continuation analysis features of MAPP to characterize
+              an FE-FET model effectively.
+
+6:00PM        Meeting Adjourns

@@ -1,0 +1,12 @@
+Quickstart:
+	- autoconf
+	- ./configure [--prefix=/where/to/install/Analyses1-on-DAEAPI]
+		[--with-DAEAPIinstallDir=/where/DAEAPI/is/installed]
+		# defaults are under $HOME/local/pkgs/
+	- make
+	- make install
+	- follow the instructions at the end of make install to test
+
+	- for development
+	  - cd staging/
+	  - run run_ALL_analysis_tests.m in matlab

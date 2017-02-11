@@ -1,0 +1,239 @@
+From Mark Lundstrom, 2012/05/21:
+> But this could be very good.  The e-mail about the VS
+> model has me thinking... could an outcome of NEEDS be a process for
+> developing high-quality compact models?  Procedures to follow to
+> increase the likelihood that the model is robust and accurate?  Could
+> an outcome be that compact models that were developed according to
+> NEEDS guidelines / processes would be more highly valued that others?
+> It is possible to establish NEEDS-certified compact models?
+
+------------------------------------------------------------------------
+
+-1. Please double check Verilog-A model, and run it in SPECTRE/HSPICE
+    if possible, before giving it to anyone to implement in a simulator.
+
+    - Example: (from DAA-VS-model-2012-05-18's veriloga_cleaned_NVsat_only.va)
+      - x was being used before it was set, for the calculation
+        of qi and Qinvq!
+      - Vgt was not set at all but used (it was in the Matlab)
+      - qdtemp was not set but used (and it was not there in Matlab either)
+
+    - related: you must have a concrete notion about what can be implicit unknowns
+      and what cannot in Verilog-A. Confusion about this can lead to
+      egregious problems. Example: see the exchange with Lan Wei, below:
+
+	> And yes, the variable of x was defined after it was first called as
+	> you mentioned.  i think the simulator takes care of getting the
+	> self-consistent solution.  It is like solving a circuit operation
+	> point.  We do not need to pre-define the initial value of the
+	> operation point and it is taken care of automatically (with the
+	> initial values of voltage set to be zero, i assume.)
+
+	Lan, the "simulator" is not some magical entity that can read people's
+	minds or make up missing information!
+
+	I agree, though, that Verilog-A can be very confusing to those not familiar
+	with exactly how simulators use it. Your point of confusion likely stems
+	from the fact that I(x,y) is being used before it is defined -- this use
+	is, in fact, quite valid.  Constructs like I(x,y) and V(x,y) are OK,
+	because Verilog-A treats them specially - allocating unknown variables
+	in the circuit equation system as necessary. That's why you can use
+	I(x,y) before setting it.
+
+	But internal variables like x/Vgt (used before being set) and qdtemp (used,
+	but never set anywhere!) are quite different. The equation system set up
+	by the simulator does not allocate unknowns for them. It's like writing
+	plain matlab code and using a variable without setting its value first.
+	That's simply a mistake.
+
+	I have a couple of general suggestions for you as you proceed:
+
+	1. Do read the Verilog-A reference manual carefully, and then read it
+	   again. And ask someone who has written and successfully deployed VA
+	   models using the constructs you employ, before sending your code "out".
+
+	2. If you have even a shadow of doubt regarding exactly how the simulator
+	   uses your code, play it safe. Don't use implicit variables like I(x,y).
+	   Use internal nodes instead - for example, for the VS model, a safer
+	   thing to do would be to declare two internal nodes x_i and y_i, and
+	   put Rd and Rs from y to y_i and x to x_i.
+
+	   This would also make your VA code far more readable/understandable to most
+	   people - always a desirable thing. (The flip side of this is that 2 extra
+	   equation system unknowns, for d_i and s_i, will be allocated, instead 
+	   of just one for I(x,y) if you do that right. Yes, it'll run a little
+	   slower. But at least it might actually be correct!)
+
+	3. Take a (good) simulation class that teaches you how to set up circuit
+	   equations from models. Luca and Jacob have a great one at MIT!
+
+	So please, take the _exact_ VA model you sent us (without changing a
+	single character), put it in SPECTRE and HSPICE, and see if it even
+	runs. Let us know how that goes.
+
+	Thanks,
+
+	Jaijeet
+
+	PS: the ModSpec MATLAB API is designed to explicitly prevent confusions
+	    such as the above.  You would have to declare I(x,y) explicitly as
+	    an "InternalUnknown", and explicitly contribute an
+	    "InternalEquation" for each InternalUnknown.
+
+
+------------------------------------------------------------------------
+
+0. Smoothness, well-posedness,  well-definedness requirements
+   - from EE219A slides
+
+------------------------------------------------------------------------
+
+1.  Follow suggestions Geoff Coram's BMAS paper and slides (stored locally in
+    Verilog-A-models/doc), they provide tips for not tripping up in Verilog-A.
+
+    - especially log vs ln: (example from DAA-VS-model-2012-05-18's 
+      veriloga_cleaned_NVsat_only.va):
+
+	----
+	Verilog-A:
+	202         FFx=V(Vg)-Vxint-n*phit*log(Fx); // this is log to the base10
+
+	Matlab:
+	126         FFx=Vg-Vxint-n*phit.*log(Fx); % this the natural logarithm,
+						  % ie, log to the base e. log
+						  % to the base 10 in matlab is
+						  % log10()
+
+	At other places in your VA code, you do use ln(), for example:
+	229         Qinvi=Qref*ln(1+exp(etai)); // ln is log to the base e in VA
+	----
+
+   - notes for JR: 
+     - detect log and issue a warning. To turn off the warning,
+       // VA_LOG_IS_OK should be on the same line.
+
+
+------------------------------------------------------------------------
+
+2. don't put floating nodes.
+   -------
+   Lan Wei, Dimitri's postdoc, (actually an older student) put a floating
+   node in the VS model
+
+   Does it work with a warning in DC analysis (not transient) in Spectre?
+
+   If this model were to go into open-source SPICE, DC analysis would fail.
+   It's not a good idea to have floating nodes in your model if you want it
+   to be portable across simulators. Also in general, try not to add nodes
+   or variables that are not necessary - it increases the size of the
+   equation system to be solved, slowing things down.
+
+   Charge neutrality can be achieved without adding an internal node. Eg,
+   just choose b as a reference node and have three charge variables, Qxb,
+   Qyb, and Qgb, and contribute -d/dt(Qxb+Qyb+Qgb) to the b node.
+   -------
+
+   - never release a model without first testing that it works correctly 
+     in (at least) DC, transient and AC analyses.
+
+   - notes for JR: 
+     - maybe implement a transient vs AC consistency check in MDE
+     - detect floating nodes and issue a warning
+
+------------------------------------------------------------------------
+
+3. Very first thing, get branch voltages from the node voltages in Verilog-A,
+   and from then on use only the branch voltages. Do not use individual
+   node voltages directly.
+   - reason: a device's behaviour should depend only on the relative voltages
+     between its nodes, otherwise it is unphysical. Eg, you could define a
+     resistor to have ipn = vp/R, or (vp-2vn)/R.
+
+   - Example violations: (from DAA-VS-model-2012-05-18's 
+     veriloga_cleaned_NVsat_only.va):
+	- Vxint=V(Vx)+(tipe*dir)*dvg;
+	- Vyint=V(Vy)-(tipe*dir)*dvg;
+	- VtOx=VtO+gamma*(sqrt((phib-(tipe*(V(Vb)-Vxint))))-sqrt(phib));
+	- VtOy=VtO+gamma*(sqrt((phib-(tipe*(V(Vb)-Vyint))))-sqrt(phib));
+	- Fx=1/(1+exp((tipe*(V(Vg)-Vxint)-(VtOx-(Vd-dvd)*delta+alpha/2*phit))/(1.1*n*phit)));
+        - Fy=1/(1+exp((tipe*(V(Vg)-Vyint)-(VtOy-(Vd-dvd)*delta+alpha/2*phit))/(1.1*n*phit)));
+	- FFx=V(Vg)-Vxint-n*phit*log(Fx);
+	- FFy=V(Vg)-Vyint-n*phit*log(Fy);
+        - Qxif=FFx*(Cif+CC*(V(Vg)-Vxint));
+	- Qyif=FFy*(Cif+CC*(V(Vg)-Vyint));
+
+------------------------------------------------------------------------
+
+4. (Recommended good practice for the sake of clarity and readability).
+   If possible, avoid situations like this (from DAA-VS-model-2012-05-18's
+   veriloga_cleaned_NVsat_only.va):
+
+   ----
+   dvg=(dir*tipe)*Rs*I(Vy,Vx);
+   dvd=(dir*tipe)*(Rs+Rd)*I(Vy,Vx);
+
+   ... // much code using dvg and dvd to get Qinv and v
+
+   I(Vy,Vx)<+(dir*tipe)*(W*Qinv*v);
+   ----
+
+   What you are really doing here is adding an extra unknown Iyx to the
+   circuit equation system, together with an extra equation: 
+   Iyx = (dir*tipe)*(W*Qinv*v);
+
+   using the value of this unknown in your code; and then finally, making the
+   KCL contribution to node y to to Iyx, and the KCL contribution to node x to
+   be -Iyx.
+
+   While this is cute (and probably saves an unknown, important for
+   efficiency), it would be more readable to declare an internal node (or two)
+   and connect resistors to them.
+
+   [Incidentally: this is a situation that might not work with the open-source
+    VA tool ADMS, which does not support internal current unknowns such as
+    Iyx].
+
+
+------------------------------------------------------------------------
+
+5. During early MATLAB prototyping of a model, don't try to solve implicit 
+   equations approximately using for loops.  For example, avoid situations 
+   like this (from DAA-VS-model-2012-05-18's veriloga_cleaned_NVsat_only.va),
+   which attempts to refine dvg, dvd and Idx using a for loop:
+
+   ---------
+	Idx = min(Vd./(Rs+Rd),W*Fsat.*Qinv.*vx0);
+	Idxx=1e-15;
+	    dvg=Idx.*Rs;
+	    dvd=Idx.*(Rs+Rd);
+	    
+	A=1;
+	while max(abs((Idx-Idxx)./Idx))>1e-10;
+	    A=A+1;
+	   if A>500, break, end
+	    Idxx=Idx;
+	    dvg=(Idx.*Rs+dvg)/2;
+	    dvd=(Idx.*(Rs+Rd)+dvd)/2;
+	    n=n0+nd*(Vd-dvd);
+	%     dvd=min(Vd,Idx.*(Rs+Rd));
+	    Vt0b=Vt0+gamma*(sqrt(phib-(Vbb-dvg))-sqrt(phib));
+	    Vtp=Vt0b-(Vd-dvd).*delta-alpha/2*phit;      
+	    eVg=exp((Vgg-dvg-Vtp)/(alpha*phit));   
+	    FF=1./(1+eVg);
+	    eta=((Vgg-dvg)-(Vt0b-(Vd-dvd).*delta-FF*alpha*phit))./(n*phit);
+	    Qinv = Qref.*log(1+exp(eta));            
+	       FFv=1./(1+exp((Vgg-dvg-(Vt0b-(Vd-dvd).*delta+zeta^2/2*phit))./(zeta*phit)));
+	       vx0=(FFv./rv+(1-FFv)).*vxo;
+	    Vdsats=vx0.*(Lg-dLg)./mu;
+	    Vdsat=Vdsats.*(1-FF)+phit*FF;
+	    Fsat=((Vd-dvd)./Vdsat)./((1+((Vd-dvd)./Vdsat).^beta).^(1/beta));
+	    v=vx0.*Fsat;
+	    Idx = (min(Vd./(Rs+Rd),W.*Qinv.*v) + 4.*Idxx)/5;
+	end
+	% Current into terminal y
+	% Qinv=Qref; %% debug purpose only
+	Iy=type*dir.*Idx;
+   ---------
+
+   Instead of doing the above, use the MDE tool, which will set up the
+   implicit equations and solve them for you, all in MATLAB!

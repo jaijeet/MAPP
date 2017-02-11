@@ -1,0 +1,323 @@
+- To explain this from scratch:
+  - start with the ModSpec equations (n, l, m, etc. - already on a slide)
+    - do an example: resistor-Vsrc-cap - 3 external nodes.
+  - then explain the Xyce-level equations below (make slides on this -> in the fullness of time)
+    - show the Xyce-level equation structure (see below and in ./Xyce_ModSpec_Notes.txt),
+      including the Xyce-level Jacobian using ModSpec Jacobian blocks
+    - work out the same example above
+  - then go through the Xyce_ModSpec_Interface data/functions (documented below)
+  - then go through N_DEV_ModSpec_Device's functions (documented below)
+
+-------------------------------------------------------------------------------------------------------------------------
+There are two components to the Xyce-ModSpec interface, which connects Xyce
+to the devices/models described using the ModSpec-C++-API:
+
+1. The class Xyce_ModSpec_Interface.{h,C}
+   - this is a standalone class which supplies functions/data that
+     make it easier to implement N_DEV_ModSpec_Device.{h,C}
+   - it can be compiled/run/tested independent of Xyce, making debugging
+     easier.
+
+2. The Xyce device/model N_DEV_ModSpec_Device
+
+These two components are documented below.
+
+-------------------------------------------------------------------------------------------------------------------------
+- The class Xyce_ModSpec_Interface:
+  - its purpose is to set up all the data and functions needed by Xyce's N_DEV_ModSpec "device", but to
+    do so in a standalone manner for easily debuggability and re-use.
+  
+  - quickstart (from a write-some-code standpoint):
+    - create an instance by passing it a string - name of a ModSpec-C++-API .so file. For example:
+      - Xyce_ModSpec_Interface XM_interface("../Res_ModSpec_Element.so"); // instantiate a Xyce_ModSpec_Interface instance
+	ModSpec_Element_with_Jacobians* ModSpecElPtr=XM_interface.ModSpecElPtr; // provide a pointer to the ModSpec element
+      - currently, this will print out various pieces of information.
+      - see test_parameter_register_get.C for more.
+
+  - Xyce_ModSpec_Interface: some internal variables and terminology:
+    - n: ModSpec quantity: half the number of IOs (ie, # of IOs = 2n)
+    - l: ModSpec quantity: number of explicitOutputs
+    - m: ModSpec quantity: number of InternalUnknowns == size of vecY
+    - l_v: Xyce_ModSpec_Interface quantity: # of explicit outputs of type 'v' (voltage branch). 0 <= l_v <= l.
+           - this is EE NIL specific, of course (for the moment).
+	   - Example: a voltage source will have n=2 (vE and iE), l = l_v = 1 (vE), m=0
+	     - vecX = iE, vecZ = vE, vecY = []
+
+    - numExtVars: Xyce (and Xyce_ModSpec_Interface) quantity: equal to the number of external nodes (including
+	the ref node) of the device. Xyce has an already-declared KCL equation for each of these. This is = n+1.
+
+    - numIntVars: Xyce (and Xyce_ModSpec_Interface) quantity: the number of extra unknowns and equations that Xyce needs 
+	to declare for this device. Equals n+m-l+l_v:
+	- n-l+m: number of implicit equations supplied by ModSpec's fi/qi. Xyce will simply see these as internal equations 
+		 contributed by the device (together with an equal number of contributed unknowns).
+	- l_v: for each explicitOutput that is a voltage branch, Xyce (which uses MNA) needs to declare an extra unknown
+		(the corresponding current branch, which it contributes to the KCLs of the branch's nodes) 
+		and add an extra equation (ei-eREF = the explicit output voltage).
+
+  - The Xyce-level equations/unknowns are (see Xyce_ModSpec_notes.txt, under Details, for more detail):
+	  - the Xyce-level unknowns are:  [vecE;   vecI;   vecY]
+				  sizes    n+1    n-l+l_v   m
+	    - where:
+	      - vecE are the n+1==numExtVars node voltages of the device's external nodes
+	      - vecI are all the external branch current unknowns declared by Xyce for the element:
+		- there are n external branches for the device - each branch has, in principle, a current
+		  unknown associated with it. (Each branch also has a voltage unknown, but these are
+		  never needed explicitly in MNA since they can be immediately derived from node voltage
+		  unknowns).
+	        - of these n current branches, l-l_v are explicitOutputs of type 'i' - these don't need
+		  current unknowns declared at the MNA level because they are available explicitly
+		  to contribute to node KCLs.
+		- so Xyce needs to declare n-(l-l_v) current unknowns - ie, the current of
+		  every external branch except 'i'-type explicitOutputs.
+	      - vecY are simply the m internal unknowns contributed by ModSpec for the device
+
+	  - the Xyce-level equations are: [KCLs;  KVLs;    vecW]
+				  sizes    n+1    l_v     n-l+m
+	    - where:
+	      - KCLs are the n+1==numExtVars KCL contributions the device will make 
+	      - KVLs are the l_v KVL equations (e_i - e_REF = the explicit output voltage) Xyce needs to set up
+	        for each 'v'-type explicitOutput (see also the description of numIntvars above)
+	      - vecW are are simply the n-l+m fi/qi equations contributed by ModSpec (see also the description of numIntvars above)
+
+	  - therefore, Xyce's jacStamp has the following form:
+		//	            vecE            vecI            vecY
+		//	            (n+1)          (n-l+l_v)         (m)
+		//	        ---------------------------------------------
+		// KCLs (n+1)   | dKCLs_dvecE     dKCLs_dvecI     dKCLs_dvecY
+		// KVLs (l_v)   | dKVLs_dvecE     dKVLs_dvecI     dKVLs_dvecY
+		// vecW (n-l+m) | dvecW_dvecE     dvecW_dvecI     dvecW_dvecY
+		//
+
+  - Xyce_ModSpec_Interface supplies the following public functions to help set up and eval
+    the above Xyce-level equations (calling ModSpec API functions to do the real work):
+
+    - [vecE, vecI, vecY] = vecEIY_from_solVec(solVec):
+      - given Xyce's circuit-level unknown vector solVec, picks out the members
+        relevant to vecE, vecI and vecY for the current element. Uses
+	this->unkidx_to_LID_map[...] to know which entries to get the data from.
+      - vecE, vecI, vecY are supplied as vector<double> references to the argument list.
+
+
+    - [f, q] = compute_fq(vecE, vecI, vecY):
+      - computes the f and q components of KCLs, KVLs and vecW above.
+        - stored in f/q in sequential order: ie, f/q[1 , n+1, ..., n+1+l_v, ... , n+1+l_v+n-l+m]
+      - f and q are stored within the Xyce_ModSpec_Interface instance as this->f and this->q.
+
+    - [jac_f, jac_q] = compute_jac_fq(vecE, vecI, vecY, do_stamps_only=0):
+      - similar to compute_fq, but computes the jacobians instead
+        - using calls to ModSpec's jacobian functions
+	  - which (by default) use Sacado AD
+      - jac_f, jac_q are of type spMatrix - provided as references to the argument list 
+        - these are stored in this->jac_f and this->jac_q
+      - if 1==do_stamps_only, then provides only a stamp matrix
+        - using calls to ModSpec's jacobian stamp functions
+	  - which (by default) use Sacado AD's Boolean types
+	- Xyce needs these at setup time to allocate memory for the circuit-level Jacobian
+	  matrices.
+        - spMatrix this->jacStamp_f and spMatrix this->jacStamp_q are stored 
+	  within Xyce_ModSpec_Interface after a call to this.
+
+    - setup_eqnunkidx_to_LID_maps(extLIDvec, intLIDvec):
+      - sets up this->unkidx_to_LID_map[...]
+        - this is a mapping from the indices of the unknowns in [vecE; vecI; vecY] 
+	  to the corresponding LID in Xyce.
+	  - the same mapping is used to go from the indices of KCLs/KVLs/vecW
+	    to the eqn LIDs of Xyce.
+      - extLIDvec and intLIDvec are supplied by Xyce
+      - what this->unkidx_to_LID_map[...] means and how to use it: an example
+        - i = this->unkidx_to_LID_map[0] provides the index (in Xyce) of the first node of 
+	  the device - so, eg, solVec[i] in UpdateIntermediateVars() will produce the
+	  voltage of this node.
+	- similarly, fVec[i] or qVec[i] in loadDAEFVector or loadDAEQVector is the residual
+	  of this node's KCL.
+
+    - setup_typedParmLists(const vector<untyped>& parmvals):
+      - ModSpec stores its parameters as untyped (to mimic ModSpec in MATLAB). But
+        Xyce (and in general most C/C++ programs) needs to handle parameters
+	of different types (eg, int, double, string) differently.
+      - in aid of this, Xyce_ModSpec_Interface has the following data members:
+	vector<double> this->doubleParms; 
+	vector<string> this->doubleParmNames;
+	vector<int>    this->intParms; 
+	vector<string> this->intParmNames;
+	vector<string> this->stringParms;
+	vector<string> this->stringParmNames;
+      - this function firstly sets up the <type>Names vectors above.
+      - it then sets the <type>parms vectors above to the right values
+        from parmvals.
+
+    - set_ModSpec_parms_from_typedParmLists():
+      - does the opposite of setup_typedParmLists: takes the
+        values from this-><type>Parms, sets up a vector<double> parms
+	in the right order of parameters for ModSpec, and then calls
+	ModSpec's setparms() API routine to set the parameter values
+	within the ModSpec element.
+
+
+  - Xyce_ModSpec_Interface also has the following protected functions:
+    - void setup_n_l_lv_m_numExtIntVars():
+      - sets up (this->) n, l, l_v, m, numExtVars, numIntVars
+
+    - void setup_A_EIXiZiXvZv():
+      - sets up various incidence matrices used in compute_fq
+        and compute_jac_fq. For details, see the Details section of
+	Xyce_ModSpec_notes.txt.
+
+    - spMatrix to_stamp(const spMatrix& A):
+      - utility function: given a sparse matrix A, return
+        a sparse matrix with its sparsity structure (ie, a 1
+	where A is nonzero, 0 elsewhere).
+    	
+    - void setup_Xyce_jacStamps();
+      - within Xyce_ModSpec_Interface, the jacobian stamps of the Xyce-level
+        equations are stored in spMatrix this->jacStamp_f and 
+	spMatrix this->jacStamp_q are stored .
+      - but Xyce's N_DEV_ModSpec_Device needs jacobian stamps in a different
+        format: vector<vector<int> > jacStamp_Xyce_f, jacStamp_Xyce_q:
+	- jacStamp_Xyce_f[i] is a vector containing the indices of the nonzero
+	  elements. [These are indices in the range
+	  (1 , n+1, ..., n+1+l_v, ... , n+1+l_v+n-l+m])-1), corresponding to
+	  the Xyce-level jacobian structure picture, above, for the element]
+      - this function sets up this->jacStamp_Xyce_f and this->jacStamp_Xyce_q
+        in this format (using this->jacStamp_f/q, which should already have
+	been set up elsewhere).
+
+    - void setup_dFQdxMat_ptrs(XMI_local::_rREPclassGeneric& rREP_F, XMI_local::_rREPclassGeneric& rREP_Q)
+      - this function sets up this->dFdxMat_ptrs and this->dQdxMat_ptrs:
+        - these are spMatrix types, except that instead of storing eg, doubles,
+	  they store pointers to doubles.
+	  - these pointers point directly to locations within Xyce's overall circuit Jacobian matrices.
+	- the patterns of these matrices are identical to this->jacStamp_f/q
+	  - as a result, the device can directly manipulate the relevant Jacobian entries within
+	    Xyce's overall circuit Jacobian matrices.
+      - this->dFdxMat_ptrs and this->dQdxMat_ptrs are later used by N_DEV_ModSpec_Devicet's
+        loadDAEdFdx and loadDAEdQdx routines.
+      - the arguments rREP_F and rREP_Q are of type _rREPclassGeneric (defined at the top of
+        Xyce_ModSpec_Interface.h), which is just a container to encapsulate Xyce's
+	double* N_LAS_Matrix::returnRawEntryPointer(int i, int j)=0 function. These are used as follows:
+	rREP_F.returnRawEntryPointer(eqn_LID, unk_LID) returns a pointer
+	to the (eqn_LID,unk_LID) entry of Xyce's circuit Jacobian for F.
+	- see N_DEV_ModSpec_Device's setupPointers() to see how to set up these arguments.
+
+-------------------------------------------------------------------------------------------------------------------------
+The files N_DEV_ModSpec_Device.{h,C}:
+
+  - these started off being copies of an existing Xyce device (eg, N_DEV_jrRLC), but have been
+    modified heavily to use Xyce_ModSpec_Interface to get a generic ModSpec-C++-API device
+    to all the real work.
+
+  - They contain several classes. Below is documentation of some of the more important classes
+    and their data/functions (from a Xyce_ModSpec_Interface point of view):
+
+    - class N_DEV_ModSpec_DeviceInstance: 
+      - constructor: 
+        - instantiates a Xyce_ModSpec_Interface variable for a given (currently hardcoded)
+	  ModSpec device. Pointer to this stored in this->XMIp.
+	  - direct pointer to the ModSpec device stored in this->ModSpecElPtr;
+	- normal Xyce devices contain addPar statements that register the model/device's
+	  parameter names with the rest of Xyce. The way this works normally is 1) 
+	  each parameter of the class is declared as a member data variable (eg, L),
+	  2) a member element pointer like &N_DEV_InductorInstance::L (this is just syntax
+	  for an offset from the start of an element of class N_DEV_InductorInstance) is
+	  put as argument into the addPar call.
+	- but since Xyce_ModSpec_Interface is generic, it must necessarily keep its parameters
+	  in lists or vectors. The above trick of offsets does not work (won't even compile)
+	  for a member of a vector (eg, &N_DEV_ModSpec_Devicenstance::doubleParms[i] does not
+	  work). So we can't use the current addPar mechanism.
+	- So we need to use Xyce's "composite parameter" mechanism instead. From Tom Russo:
+	  """
+		You may be able to set up a "composite parameter" instead ---
+		there are a handful of devices that have special parameters that are
+		complex data structures instead of a simple number.  It is a horrid
+		kludge, though, and poorly documented.  In fact, I think it's
+		completely *undocumented* except in the code itself.  Every time I've had to
+		use it, I have had to go back and re-learn the entire convoluted process, but
+		the system does work and is very flexible.
+
+		If you take a look at a device like N_DEV_Xygra.C, there is something
+		called an "addComposite" call.  It is hard to describe how to use it,
+		and I've only done one or two devices that need it --- Keiter is much
+		better to ask, as he uses this all the time and may be able to answer
+		you right away.  But I'll try to remember what it's all about and get
+		back to you.  In the meantime...
+
+		Basically, the device itself has only a member object that is a
+		complex type, and that's passed to the device entity as a "composite"
+		parameter.  How this gets parsed, however, is tricksy.  In order to
+		give you guidance on how to do it, I will need to spend time with
+		N_DEV_Xygra to remember how the heck I did that, unless Keiter steps
+		in here and answers you before I can do that.
+
+		Partial brain dump:
+
+		The Xygra device takes a "COIL" parameter that is specified like:
+
+		COIL = { NAME       = FOO  ,BAR,BAZ
+		+          NUMWINDINGS=1 ,1 ,1   }
+
+		There is a class called N_DEV_CompositeParam, which is then used as a
+		base class for the "N_DEV_XygraCoilData" class which contains the
+		actual data for the composite parameter (in this case, the class
+		contains a "name" and "numWindings" double, and there is a separate
+		CompositeParam object allocated for each of the three specifications
+		in the COIL parameter above).
+
+		There's a trick to it as well, that involves setting up a map that
+		maps a string name to a particular compositeParam object, and it's
+		this map that you actually pass to the addComposite call.  The map is
+		a member of your instance class, and addComposite gets passed a member
+		pointer to the map, so it can pull out the map for any given instance
+		object.  Once it has the map, it can get the pointer to the actual
+		CompositeParam object it needs, and once it has the pointer, it can
+		get any individual piece of it.  I think that what you want is to have
+		your ModSpec vector inside one of these composite params, and then you
+		can do anything you want with the individual elements.
+
+		So you *might* be able to get your ModSpec parameters into Xyce
+		through a composite parameter.
+
+		There are other devices that use this, but I think most of them are in
+		the SandiaModels part of the code.  In fact, I just checked, and the
+		only composite parameter usage in the entire open-source part of the
+		code is in N_DEV_Xygra and N_DEV_RxnSet.  Between those two you might
+		be able to get some idea of what's going on.
+	  """
+      - registerLIDs(vector<int>& intLIDvecRef, vector<int>& extLIDvecRef): 
+        - extLIDvecRef and intLIDvecRef are exactly the arguments needed
+  	  for Xyce_ModSpec_Interface::setup_eqnunkidx_to_LID_maps. This
+	  function just calls that so that the LIDs are set up.
+
+      - jacobianStamp():
+        - currently returns jacStamp. Not sure if that's what we should be doing.
+	- THIS NEEDS TO BE WORRIED ABOUT. jacStamp is not set up anywhere yet.
+	- DAEdQdxJacStamp and DAEdFdxJacStamp both call this.
+
+      - setupPointers():
+        - this sets up pointers from inside the device to the relevant entries of
+	  Xyce's circuit Jacobians.
+	- it simply calls Xyce_ModSpec_Interface::setup_dFQdxMat_ptrs
+
+      - registerJacLIDs(vector<vector<int> > jacLIDvec):
+        - currently just calls the base class's N_DEV_DeviceInstance::registerJacLIDs(jacLIDvec)
+	- registerDAEJacLIDs(a, b, c) calls this with only a as argument - need to make sure
+	  this is really what we want for a ModSpec device.
+
+      - updateIntermediateVars():
+        - this is where most device eval gets done:
+	  - XMIp->vecEIY_from_solVec(/* outputs */ vecE, vecI, vecY, /* inputs */ solVec);
+	  - XMIp->compute_fq(vecE, vecI, vecY); // computes and stores XMIp->f/q
+	  - XMIp->compute_jac_fq(/* outputs */ XMIp->jac_f, XMIp->jac_q, /* inputs */ vecE, vecI, vecY)
+
+      - loadDAEQVector() and loadDAEQVector():
+        - just pick up values from XMIp->f/q (already calculated by call to updateIntermediateVars()) and scatter
+	  into Xyce's system f and q equation (residual) vectors (accessed via 
+	  this->extData.daeQVectorRawPtr and this->extData.daeFVectorRawPtr) using the LIDs set
+	  up and stored in XMIp->eqnidx_to_LID_map[...].
+
+      - loadDAEdQdx() and loadDAEdFdx():
+        - pick up values from XMIp->jac_f/q (already calculated by call to updateIntermediateVars()) and scatter
+	  into Xyce's system f and q Jacobian matrices (accessed via 
+	  XMIp->dFdxMat_ptrs[i,j], set up during call to setupPointers()).
+
+    - class N_DEV_ModSpec_DeviceModel: 
+      - hasn't really been written yet.

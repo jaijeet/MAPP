@@ -1,0 +1,9 @@
+
+Automatic differentiation using vecvalder package
+
+
+vecvalder package HELP Topic:
+--------------------------------------------------------------------------------------------
+vecvalder/vcevalder-functions          - Various overloaded function implemented in vecvalder
+vecvalder/vecvalder-utils              - Various utility functions used in vecvalder
+vecvalder/vecvalder-tests              - Demonstration of vecvalder usage

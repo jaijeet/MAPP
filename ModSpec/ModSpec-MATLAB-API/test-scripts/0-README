@@ -1,0 +1,37 @@
+README file for test-scripts of ModSpec: 
+
+How to use: 
+
+1) Run all tests:
+	- run_ALL_ModSpec_tests
+	  will run all test scripts and compare results with 
+	  .mat files in test-data. 
+
+	- update_ALL_ModSpec_tests
+	  update all test data when you are satisfied with the 
+	  current version of ModSpec. 
+	  If test-data doesn't exist, will generate it. 
+	  If the according .mat file doesn't exist, will 
+		generate it. 
+
+2) Run separate tests:
+	- test_***()
+	  will run separate test script. 
+
+	- test_***('update')
+	  will update .mat file for separate test script. 
+	  will generate the file if it doen't exist. 
+
+3) Debug level:
+	- run_ModSpec_functions
+	  see help strings
+	  usage: 
+		run_ModSpec_functions(DAE, name)   or
+		run_ModSpec_functions(DAE, name, 'update')
+
+How to add new tests:
+	- write test_***() calling run_ModSpec_functions
+	- add it to run_ALL_ModSpec_tests
+	- add it to update_ALL_ModSpec_tests
+	- run test_***('update') first to generate .mat file
+	- run test_***()

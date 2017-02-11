@@ -1,0 +1,11 @@
+
+MATLAB Model Specification (ModSpec) API to describe compact models
+
+
+ModSpec HELP Topic:
+--------------------------------------------------------------------------------------------
+ModSpec/ModSpec-device-models        - Various compact models represented in ModSpec API
+ModSpec/ModSpec-test-scripts         - Various demos scripts to test and run variosu ModSpec compact models 
+ModSpec/smoothingfuncs               - Various smoothing functions to remedy model discontinuity and non-differentiability
+ModSpec/ModSpec-testdata             - Test data from various ModSpec models (TODO: Need to implement this manually)
+ModSpec/ModSpec-utils                - Various external utility functions used in building a standard ModSpec model

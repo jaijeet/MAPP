@@ -1,0 +1,92 @@
+
+Instructions for installing a 30-day trial version of MATLAB
+------------------------------------------------------------
+
+You will need a good internet connection and (at least) about 6GB of 
+free space on your hard drive.
+
+
+1. Create a Mathworks account (if you don't have one already) at 
+   https://mathworks.com/. Mathworks will ask you for an email address 
+   while doing so. Then Mathworks will send you a link to this email 
+   address to verify it. Click this link, and you will be taken to a 
+   page where you can create a username, set a password for your 
+   Mathworks account, etc.
+
+2. Once you complete the above and log in to your Mathworks account, 
+   you should see a "Trial software" link somewhere on the page. Click 
+   on this. It may ask ask you for a few details, such as which state 
+   you're from, which university/company you belong to, etc. As far as 
+   we can tell, you will be getting the same trial version of MATLAB no 
+   matter which company/university you belong to.
+
+3. If Mathworks gives you a choice between a "Packaged trial" and an 
+   "Assisted trial". Choose "Packaged trial".
+
+4. When asked to "select your areas of interest", check "Computational 
+   Biology". We suggest that you leave everything else unchecked. Check 
+   the "I certify this information to be true" checkbox and hit 
+   Continue.
+
+5. The web site may ask you a few more questions, but eventually it will 
+   give you a few options asking you which trial version of MATLAB you 
+   want to install (the Windows version, the Mac OS X version, etc.). 
+   Choose the version appropriate to your OS and begin the download.
+   This will download a "MATLAB installer" for your system: think of 
+   this as a small "set up" program whose only job is to help you 
+   download and install the real program (MATLAB).
+
+6. Now you're ready to install MATLAB using the installer above. 
+
+    6.1. In your file manager, go to wherever MATLAB has downloaded the 
+         installer. For example, in Mac OS X, this location by default 
+         is the Downloads/ directory under your home directory. 
+         
+         If you're using Windows, the installer will probably just be a 
+         single exe file. Run this file to start the installation 
+         process. 
+         
+         If you're using Linux or Mac OS X, the installer may be a zip 
+         or other archive: in this case, unzip/extract it first and 
+         look inside. The unzipped directory will contain an executable 
+         with a blindingly obvious name, such as "install" or 
+         "InstallForMacOSX". Run this executable. 
+
+    6.2. The installer will take you from one GUI screen to the next. 
+         Most options that it gives you are straightforward: choose 
+         appropriately and proceed with the installation.
+
+    6.3. When MATLAB asks you which toolboxes you want to install, 
+         choose (at a minimum) the Bioinformatics toolbox and the 
+         Statistics and Machine Learning toolbox.
+
+    6.4. Finally, hit Install. MATLAB will then download several 
+         hundred MBs worth of data and install itself to wherever you 
+         specified. Here's when a good internet connection will come in 
+         handy.
+
+    6.5. When the installation is complete, the installer will ask you 
+         to "Activate MATLAB". When you do, the trial version will be 
+         deemed active and your 30-day countdown will start. You will 
+         see an "activation confirmed" dialog. At this point, hit 
+         "Finish", and the installer will exit.
+         
+7. Running MATLAB. 
+
+    Soon after completing the MATLAB installation above, we recommend 
+    that you test it to make sure it works as expected.
+
+    On Windows/Linux systems, once MATLAB has finished installing 
+    itself, you will find an executable (named matlab) in the bin/ 
+    directory of the installation. This is the MATLAB application. 
+    Running it will fire off the familiar MATLAB splash screen and 
+    leave you at the MATLAB command prompt. 
+
+    On Mac OS X, the entire MATLAB application will be packaged into a 
+    single file within the installation directory. Clicking on this 
+    file will start MATLAB and leave you at the familiar MATLAB command 
+    prompt.
+
+    Congrats, you now have a working 30-day trial version of MATLAB.
+
+

@@ -1,0 +1,28 @@
+These instructions are for compiling and testing ModSpec-C++-API.
+ModSpec-MATLAB-API is now set up as part of MAPP (ie, autoconf etc. one
+directory level up).
+
+Quickstart:
+- [first, compile and install Trilinos. See 
+   ./doc/0-how-to-compile-and-run-the-ModSpec-C++-API
+  ]
+- autoconf
+- ./configure #
+  [--with-trilinosInstallDir=/where/trilinos/is/installed] 
+  [--with-vecvalderInstallDir=/where/vecvalder/is/installed] 
+  [--with-extraincludes="-Isomedir -Isomedir2"] 
+  [--with-extralibs="-Lsomedir1 -Lsomedir2 -lsomelib1 -lsomelib2"] 
+  # default locations are under $HOME/local/pkgs/
+- make
+- test the ModSpec-C++-API:
+  - cd ModSpec-C++-API
+  - # check that the trilinos libraries are in your $LD_LIBRARY_PATH.
+    # if not, prepend LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<trilinos_library_path>
+    # to the commands below
+  - ./test_ModSpec_Element_using_dlopen ./Res_ModSpec_Element.so
+  - ./test_ModSpec_Element_using_dlopen ./RLC_ModSpec_Element.so
+  - ./test_ModSpec_Element_using_dlopen ./RLC2_ModSpec_Element.so
+  - ./test_ModSpec_Element_using_dlopen ./RLC2_ModSpec_Element.so
+  - cd tests-for-Xyce
+  - ./test_nExtvars_nIntvars_jacStamp_MNA ../Res_ModSpec_Element.so
+  - ./test_parameter_register_get ../Res_ModSpec_Element.so

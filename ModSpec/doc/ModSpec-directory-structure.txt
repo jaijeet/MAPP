@@ -1,0 +1,60 @@
+This directory contains the following:
+
+ModSpec-MATLAB-API/
+	- Matlab version of ModSpec API and models (written by JR, 2012)
+	  - see ModSpec-MATLAB-API/0-README
+
+ModSpec-C++-API/
+	- C++ version of ModSpec API and models (written by JR, 2012)
+	- see ModSpec-C++-API/0-README
+
+doc/
+	- some tentative documentation
+
+Verilog-A-models/
+	- source for some Verilog-A models (including BSIM, DAAV6)
+
+amsallem/ - old stuff, mostly David Amsallem's
+
+	ModSpec-doc.txt 
+		- documentation on ModSpec - HIGHLY OUT OF DATE and INCOMPLETE
+
+	run_testcases.m
+		- a user-friendly driver that will help run tests. run this
+		  first.
+
+	DeviceLibrary.d/
+		- contains ModSpec files for various devices, together with lists
+		  of all the models available, and utility functions for reading
+		  these lists.
+
+	Parsers/
+		- contains parsers to read netlists and return a DS object
+		  - DS is a data structure containing all information about
+		    the circuit: what elements there are, the graph structure,
+		    links to the ModSpec model functions, etc..
+		  - DS is currently called DeviceStruct. A more descriptive name
+		    for it might be: NetworkElementModelDataStruct
+
+	Equation-Engines/
+		- contains different equation engines (eg, MNA, Sparse Tableau)
+		  that take DS and return a DAE.
+
+	Solvers/
+		- numerical solvers (eg, NR, transient) that take a DAE and analyse
+		  them. (CURRENTLY EMPTY; NR and transient solvers with limiting is
+		  hardcoded in testParserEquationEngine.m, needs to be taken out and
+		  put in here).
+
+	MOR/
+		- David's nonlinear MOR code - focussing on gappy methods for neuron
+		  system.
+
+	Tests.d/
+		- contains various test input files (netlists).
+
+	utilities/
+		- misc utility functions that can be useful.
+
+	to-delete/
+		- obsolete stuff scheduled to be deleted.

@@ -1,0 +1,102 @@
+
+You have 2 options for running MAPP. You can either choose to run MAPP 
+locally on your laptop, or you can run MAPP as a web-based tool made 
+available through nanoHUB. Instructions for each are provided below.
+
+Option 1: Running MAPP locally
+------------------------------
+
+Step 1: Getting MATLAB
+----------------------
+
+MAPP is a MATLAB-based tool. To run it, you need access to a working 
+MATLAB installation. If you already have MATLAB working, you can go 
+straight to Step 2 below.
+
+If you don't have access to MATLAB, you can get a 30-day trial version
+of MATLAB (for which you will need a good internet connection and at
+least about 6GB of free space on your hard drive).
+
+Step 2: Getting MAPP up and running
+-----------------------------------
+
+Assuming you have a working MATLAB installation, here's how you can get 
+MAPP working:
+
+2.1. Downloading MAPP. I'm assuming you already have the MAPP tarball 
+     (as well as a tarball containing the scripts you will need for this 
+     workshop) downloaded and saved locally.
+
+2.2. Untar the MAPP tarball. In a Unix like system, this would be done 
+     by running the following command:
+
+        $ tar -xvzf MAPP-alpha-v1.00.02-pre.tgz
+     
+     Or, depending on your OS, you may be able to just double-click the 
+     tarball and have it automatically be untarred for you. (Note to 
+     Windows users: do NOT use winzip to untar the tarball, it can 
+     produce unexpected results. Use a program like 7-zip instead.).
+
+     Either way, a directory named "MAPP-alpha-v1.00.02-pre" will be 
+     created. This directory will contain everything needed for MAPP to 
+     run within a MATLAB session.
+
+2.3. Edit paths in a couple of files. The next step is to edit the 2 
+     files startup_MAPP.m and setuppaths_MAPP.m located in the 
+     MAPP-alpha-v1.00.02-pre/ directory above. Both these files set a 
+     variable "basedir" that points to the root directory of the MAPP 
+     installation (i.e., the full path to the MAPP-alpha-v1.00.02-pre
+     directory created above). So set the basedir variable in both these 
+     files to the appropriate path string.
+
+2.4. Set up MATLAB so that MAPP starts whenever MATLAB is fired up. 
+
+     If you haven't set up your own MATLAB startup script (if you don't 
+     know what this is, you probably don't have one set up), rename 
+     startup_MAPP.m to startup.m and move startup.m to a place that
+     MATLAB automatically sources (such as ~/.matlab/startup.m on Linux,
+     or ~/Documents/MATLAB/startup.m on Windows/Mac OS X). 
+     
+     If you already have a MATLAB startup script, append the contents 
+     of startup_MAPP.m to your startup script.
+
+2.5. Test that MAPP works correctly. Start MATLAB, and you should 
+     immediately see a message saying "This is the Berkeley Model and 
+     Algorithm Prototyping Platform" and some version information 
+     printed below. This indicates that MAPP is installed. To quickly 
+     check the correctness of the installation, run the following 
+     command at the MATLAB prompt:
+
+         >> MAPPtest(allMAPPtests('realquick'))
+
+     This will run a bunch of tests on simple devices and circuits in 
+     MAPP. If it tells you that all tests passed, you're good to go.
+
+
+Option 2: Running MAPP via nanoHUB
+----------------------------------
+
+MAPP is also available as a web-based nanoHUB tool. To run MAPP this 
+way, you will need a nanoHUB account with MATLAB access privileges. If 
+you don't have this, please contact Xufeng Wang <wang159@purdue.edu>.
+
+To run MAPP via nanohub, visit https://nanohub.org/tools/mde (you may 
+need to log in to your nanoHUB account first). Hit the "Launch tool" 
+button to the right. Your browser may ask you to approve running Java, 
+etc. for this application. Once you approve, the application will start 
+and a VNC-based graphical MATLAB session running MAPP will be opened 
+for you right in your browser. If you face any issues, please contact
+Xufeng Wang <wang159@purdue.edu>.
+
+For the workshop, you will also need a few MATLAB scripts that we have
+prepared. Assuming that you have already downloaded the tarball
+containing these scripts, you can transfer this tarball to your running
+nanoHUB session using either SFTP to <youraccount>@nanohub.org or the
+graphical Import/Export widget that the session gives you. When the
+transfer is complete, untar the tarball by typing the following at your
+MATLAB prompt:
+
+    >> system('tar -xvzf 2015-May-12--MAPP-MIT-workshop-scripts.tgz')
+
+And that's it. You're now ready for the workshop!
+

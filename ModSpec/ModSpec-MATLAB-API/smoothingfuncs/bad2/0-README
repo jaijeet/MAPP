@@ -1,0 +1,23 @@
+- the problem: smoothmax as implemented here is bad:
+  nonmontonicity in derivative, which can become negative
+  - this can cause passivity/instability during source-drain exchange!
+
+- need to find a better way than sqrt(x^2+espilon)
+  - DONE max(x,y) = x+y + abs(x-y)
+    - no multiplications => no derivative nomontonicity problems
+
+How we got there: by starting from the fact that for abs(x), we have
+	abs(x) = x*sign(x) ~= sqrt(x^2)
+	         ^^^^^^^^^    ^^^^^^^^^
+		 bad          good
+
+then x*step(x) = x*(sign(x)+1)/2 ~= (sqrt(x^2)+x)/2
+and x*step(x-y) + y*(1-step(x-y)) 
+    = (x-y)*step(x-y) + y*step(x-y) + y + (x-y)*step(x-y) - x*step(x-y)
+    = (x-y)*step(x-y) + y ~= y + (sqrt( (x-y)^2 ) + (x-y))/2
+    = (x+y)/2 + sqrt( (x-y)^2 )/2 ???
+
+is max(x,y)  = 0.5*[x + y + abs(x-y)]? yes!
+
+
+and min(x,y) = 0.5*[x + y - abs(x-y)]? yes.

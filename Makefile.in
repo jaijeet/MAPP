@@ -1,0 +1,440 @@
+CYGWINPREFIX=@CYGWINPREFIX@
+MAPPTOP=@MAPPTOP@
+MAPPVERSION=@MAPPVERSION@
+MAPPLOCALLINKSDIR=@MAPPLOCALLINKSDIR@
+VVIMPLEMENTATION=@VVIMPLEMENTATION@
+#MAPPINSTALLDIR=$(CYGWINPREFIX)@prefix@
+	# WATCH OUT for terminating spaces in the above!
+DATESTRING=$(shell date +%F-%H%M)
+MAPPRELEASESNAPSHOTNAME=$(MAPPVERSION)-release-snapshot-$(DATESTRING)
+#####
+
+VECVALDER=@VECVALDER@
+UTILS=@UTILS@
+MODSPEC=@MODSPEC@
+LOCALMODSPEC=@LOCALMODSPEC@
+DAEAPI=@DAEAPI@
+LOCALDAEAPI=@LOCALDAEAPI@
+CONTRIBS=@CONTRIBS@
+LOCALCONTRIBS=@LOCALCONTRIBS@
+OPTO=@OPTO@
+LOCALOPTO=@LOCALOPTO@
+A1oDAEAPI=@A1oDAEAPI@
+LOCALA1oDAEAPI=@LOCALA1oDAEAPI@
+A2oDAEAPI=@A2oDAEAPI@
+LOCALA2oDAEAPI=@LOCALA2oDAEAPI@
+A3oDAEAPI=@A3oDAEAPI@
+LOCALA3oDAEAPI=@LOCALA3oDAEAPI@
+DOCUMENTATION=@DOCUMENTATION@
+VAPP=@VAPP@
+TMPDIR=/var/tmp
+SHELL=/bin/bash
+
+MAPPRELEASESNAPSHOTPATH=$(TMPDIR)/$(MAPPRELEASESNAPSHOTNAME)
+MAPPLOCALLINKSDIRNAME=$(notdir $(MAPPLOCALLINKSDIR))
+
+all: installlocallinks
+
+$(MAPPLOCALLINKSDIR):
+	@if [ ! -e $(MAPPLOCALLINKSDIR) ]; then mkdir $(MAPPLOCALLINKSDIR); fi
+
+$(MAPPTOP)/locallinks-are-current: $(MAPPLOCALLINKSDIR)
+	@if [ ! -e $(MAPPLOCALLINKSDIR)/$(VECVALDER) ]; then mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/tests; \
+						mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-tests; \
+						mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-MATLAB; \
+						mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-MATLAB/\@vv4/; \
+						mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-python/vv4; \
+						mkdir -p $(MAPPLOCALLINKSDIR)/$(VECVALDER)/\@vecvalder; fi
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/tests; ln -s ../../../vecvalder/tests/*.m .
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/\@vecvalder; ln -s ../../../vecvalder/\@$(VVIMPLEMENTATION)/*.m .
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-tests; ln -s ../../../vecvalder/vv4/vv4-tests/*.m .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-tests; ln -s ../../../vecvalder/vv4/vv4-tests/*.py .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-MATLAB; ln -s ../../../vecvalder/vv4/vv4-MATLAB/*.m .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-MATLAB/\@vv4/; ln -s ../../../../vecvalder/vv4/vv4-MATLAB/\@vv4/*.m .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-python/vv4; ln -s ../../../../vecvalder/vv4/vv4-python/vv4/*.py .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER)/vv4-python/vv4; ln -s ../../../../vecvalder/vv4/vv4-python/vv4/*.jinja2 .; 
+	@-cd $(MAPPLOCALLINKSDIR)/$(VECVALDER); ln -s ../../0-README ../../00-VERSION .
+	@-if [ "$(CONTRIBS)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(CONTRIBS) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(CONTRIBS); \
+	    fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALCONTRIBS); find . -type d)`; do \
+				cd $(MAPPTOP)/$(LOCALCONTRIBS)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(CONTRIBS)/; \
+					ln -s $(MAPPTOP)/$(LOCALCONTRIBS)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALCONTRIBS)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(CONTRIBS)/; \
+					ln -s $(MAPPTOP)/$(LOCALCONTRIBS)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALCONTRIBS)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(CONTRIBS)/; \
+					ln -s $(MAPPTOP)/$(LOCALCONTRIBS)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALCONTRIBS)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(CONTRIBS)/; \
+					ln -s $(MAPPTOP)/$(LOCALCONTRIBS)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-if [ "$(MODSPEC)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(MODSPEC) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(MODSPEC); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(MODSPEC); \
+		if [ -e $(MAPPTOP)/$(LOCALMODSPEC)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALMODSPEC)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(LOCALMODSPEC)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALMODSPEC)/../00-VERSION .; fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALMODSPEC); find . -type d -not -wholename '*MVS-old*' -not -wholename '*smoothingfuncs/bad*')`; do \
+				cd $(MAPPTOP)/$(LOCALMODSPEC)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(MODSPEC)/; \
+					ln -s $(MAPPTOP)/$(LOCALMODSPEC)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALMODSPEC)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(MODSPEC)/; \
+					ln -s $(MAPPTOP)/$(LOCALMODSPEC)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALMODSPEC)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(MODSPEC)/; \
+					ln -s $(MAPPTOP)/$(LOCALMODSPEC)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALMODSPEC)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(MODSPEC)/; \
+					ln -s $(MAPPTOP)/$(LOCALMODSPEC)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-if [ "$(DAEAPI)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(DAEAPI) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(DAEAPI); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(DAEAPI); \
+		if [ -e $(MAPPTOP)/$(LOCALDAEAPI)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALDAEAPI)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(LOCALDAEAPI)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALDAEAPI)/../00-VERSION .; fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALDAEAPI); find . -type d)`; do \
+				cd $(MAPPTOP)/$(LOCALDAEAPI)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(DAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALDAEAPI)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALDAEAPI)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(DAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALDAEAPI)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALDAEAPI)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(DAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALDAEAPI)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALDAEAPI)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(DAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALDAEAPI)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-if [ "$(A1oDAEAPI)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI); \
+		if [ -e $(MAPPTOP)/$(LOCALA1oDAEAPI)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(LOCALA1oDAEAPI)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/../00-VERSION .; fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALA1oDAEAPI); find . -type d)`; do \
+				cd $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A1oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA1oDAEAPI)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@#for i in `(cd $(MAPPTOP)/$(LOCALA2oDAEAPI); find . -type d -not -wholename '*tianshi-HB*' )`; do
+	@-if [ "$(A2oDAEAPI)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI); \
+		if [ -e $(MAPPTOP)/$(LOCALA2oDAEAPI)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(LOCALA2oDAEAPI)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/../00-VERSION .; fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALA2oDAEAPI); find . -type d )`; do \
+				cd $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A2oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA2oDAEAPI)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-if [ "$(A3oDAEAPI)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI); \
+		if [ -e $(MAPPTOP)/$(LOCALA3oDAEAPI)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(LOCALA3oDAEAPI)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/../00-VERSION .; fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALA3oDAEAPI); find . -type d )`; do \
+				cd $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(A3oDAEAPI)/; \
+					ln -s $(MAPPTOP)/$(LOCALA3oDAEAPI)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-for i in `(cd $(MAPPTOP)/$(UTILS); find . -type d )`; do \
+				mkdir -p $(MAPPLOCALLINKSDIR)/$(UTILS); \
+				cd $(MAPPTOP)/$(UTILS)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(UTILS)/; \
+					ln -s $(MAPPTOP)/$(UTILS)/$$i/*.m .; \
+				fi; \
+        	done
+	@-if [ "$(OPTO)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(OPTO) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(OPTO); \
+	    fi; \
+		for i in `(cd $(MAPPTOP)/$(LOCALOPTO); find . -type d)`; do \
+				cd $(MAPPTOP)/$(LOCALOPTO)/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(OPTO)/; \
+					ln -s $(MAPPTOP)/$(LOCALOPTO)/$$i/*.m .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALOPTO)/$$i; DOTMFILES=`echo *.mat`; \
+				if [ "$$DOTMFILES" != '*.mat' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(OPTO)/; \
+					ln -s $(MAPPTOP)/$(LOCALOPTO)/$$i/*.mat .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALOPTO)/$$i; DOTMFILES=`echo *.jpg`; \
+				if [ "$$DOTMFILES" != '*.jpg' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(OPTO)/; \
+					ln -s $(MAPPTOP)/$(LOCALOPTO)/$$i/*.jpg .; \
+				fi; \
+				cd $(MAPPTOP)/$(LOCALOPTO)/$$i; DOTMFILES=`echo *.png`; \
+				if [ "$$DOTMFILES" != '*.png' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(OPTO)/; \
+					ln -s $(MAPPTOP)/$(LOCALOPTO)/$$i/*.png .; \
+				fi; \
+        done\
+	  fi
+	@-if [ "$(VAPP)" != "" ]; then \
+		if [ ! -e $(MAPPLOCALLINKSDIR)/$(VAPP) ]; then \
+			mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP); \
+	    fi; \
+	    cd $(MAPPLOCALLINKSDIR)/$(VAPP); \
+		if [ -e $(MAPPTOP)/$(VAPP)/00-README ]; then ln -s $(MAPPTOP)/$(VAPP)/../0-README .; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/va2modspec.m ]; then ln -s $(MAPPTOP)/$(VAPP)/va2modspec.m .; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/valint.m ]; then ln -s $(MAPPTOP)/$(VAPP)/valint.m .; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/frontend ]; then mkdir frontend; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/backend ]; then mkdir backend; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/doc ]; then mkdir doc; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/examples ]; then mkdir examples; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/examples ]; then mkdir va_models; fi; \
+		for i in `(cd $(MAPPTOP)/$(VAPP)/backend; find . -type d )`; do \
+				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/backend/$$i; \
+				cd $(MAPPTOP)/$(VAPP)/backend/$$i; DOTMFILES=`echo *.*`; \
+				if [ "$$DOTMFILES" != '*.*' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/backend/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/backend/$$i/*.* .; \
+				fi; \
+        	done;\
+		for i in `(cd $(MAPPTOP)/$(VAPP)/frontend; find . -type d )`; do \
+				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/frontend/$$i; \
+				cd $(MAPPTOP)/$(VAPP)/frontend/$$i; DOTMFILES=`echo *.*`; \
+				if [ "$$DOTMFILES" != '*.*' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/frontend/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/frontend/$$i/*.* .; \
+				fi; \
+        	done;\
+		for i in `(cd $(MAPPTOP)/$(VAPP)/examples; find . -type d )`; do \
+				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/examples/$$i; \
+				cd $(MAPPTOP)/$(VAPP)/examples/$$i; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/examples/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/examples/$$i/*.m .; \
+				fi; \
+        	done;\
+		for i in `(cd $(MAPPTOP)/$(VAPP)/va_models; find . -type d )`; do \
+				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
+				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.va`; \
+				if [ "$$DOTMFILES" != '*.va' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.va .; \
+				fi; \
+				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.vams`; \
+				if [ "$$DOTMFILES" != '*.vams' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.vams .; \
+				fi; \
+				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.h`; \
+				if [ "$$DOTMFILES" != '*.h' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
+					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.h .; \
+				fi; \
+        	done;\
+		cd $(MAPPTOP)/$(VAPP)/doc; DOTMFILES=`echo *.m`; \
+				if [ "$$DOTMFILES" != '*.m' ]; then \
+					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/doc; \
+					ln -s $(MAPPTOP)/$(VAPP)/doc/*.m .; \
+				fi; \
+	  fi
+	@-if [ !  -e $(MAPPLOCALLINKSDIR)/$(DOCUMENTATION) ]; then mkdir -p $(MAPPLOCALLINKSDIR)/$(DOCUMENTATION); fi
+	@-cd $(MAPPLOCALLINKSDIR)/..;
+	@-chmod u+x Generate_help.sh
+	@-./Generate_help.sh
+	@-cp setuppaths_MAPP.m start_MAPP.m $(MAPPLOCALLINKSDIR)
+	@-#ln -s $(MAPPLOCALLINKSDIR)/start_MAPP.m $(MAPPLOCALLINKSDIR)/startup_MAPP.m 
+	@-ln -s $(MAPPLOCALLINKSDIR) MAPP-locallinks-installation
+	@-touch $(MAPPTOP)/locallinks-are-current
+
+install installlocallinks: $(MAPPTOP)/locallinks-are-current
+	@echo ""
+	@echo "$(MAPPLOCALLINKSDIR) directory with soft links created."
+	@echo ""
+	@echo "To load MAPP in MATLAB, copy or link"
+	@echo "    $(MAPPLOCALLINKSDIR)/start_MAPP.m"
+	@echo "into a directory in MATLAB's search path (eg, ~/Documents/MATLAB/)."
+	@echo "After starting MATLAB, just type"
+	@echo "    start_MAPP"
+	@echo "at the MATLAB prompt and MAPP will get loaded."
+	@echo ""
+	@echo "It can be convenient to auto-start MAPP whenever MATLAB is started."
+	@echo "To do this, copy, link or include"
+	@echo "    $(MAPPLOCALLINKSDIR)/start_MAPP.m"
+	@echo "to/in a file named (exactly) startup.m in MATLAB's search path"
+	@echo "(eg, ~/Documents/MATLAB/startup.m). MAPP should then auto-load"
+	@echo "whenever MATLAB is started."
+	@echo ""
+	@echo "To clean up all the files created by autoconf and make:"
+	@echo "    $ make clean autoclean"
+	@echo ""
+
+releasesnapshot: $(MAPPTOP)/locallinks-are-current
+	@echo "1. If you have not done so already, untar the MAPP tarball"                  >| $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   ($(MAPPRELEASESNAPSHOTNAME).tgz"                                          >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "    or"                                                                      >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "    $(MAPPVERSION).tgz)"                                                     >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   somewhere (say under /where/ever/, ie, creating" 							>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   /where/ever/$(MAPPLOCALLINKSDIRNAME)/)."                                  >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "" 																			>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "2. Edit the file start_MAPP.m in" 											>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   /where/ever/$(MAPPLOCALLINKSDIRNAME)/" 									>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   and change the definition of basedir (first line) to:"					>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "     '/where/ever/$(MAPPLOCALLINKSDIRNAME)/'." 								>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "" 																			>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "3. To load MAPP in MATLAB, copy or link"                                     >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   /where/ever/$(MAPPLOCALLINKSDIRNAME)/start_MAPP.m"                        >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   into a directory in MATLAB's search path (eg, ~/Documents/MATLAB/)."      >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   After starting MATLAB, just type"                                         >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "       start_MAPP"                                                           >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   at the MATLAB prompt and MAPP will get loaded."                           >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo ""                                                                            >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   It can be convenient to auto-start MAPP whenever MATLAB is started."      >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   To do this, copy, link or include"                                        >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   /where/ever/$(MAPPLOCALLINKSDIRNAME)/start_MAPP.m"                        >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   to/in a file named (exactly) startup.m in MATLAB's search path"           >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   (eg, ~/Documents/MATLAB/startup.m). MAPP should then auto-load"           >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   whenever MATLAB is started."                                              >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo ""                                                                            >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   You can also load MAPP when starting MATLAB via the command line, thus:"  >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "     matlab -r \"cd /where/ever/$(MAPPLOCALLINKSDIRNAME)/; start_MAPP;\""	>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo ""                                                                            >> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "4. Start MATLAB and load MAPP (as in 3. above). Then test it if you like:" 	>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > run_BJTdiffpair_DCsweep % a quick test, should produce a tanh() " 		>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > MAPPtest_quick" 														>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > MAPPtest % takes about 10m"												>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   % the following are not maintained regularly and might not work:" 		>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > run_ALL_A1oDAEAPI_tests % this takes a long time" 						>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > run_ALL_A2oDAEAPI_tests % if you have access to the A2oDAEAPI submodule" 	>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > run_ALL_A3oDAEAPI_tests % if you have access to the A3oDAEAPI submodule" 	>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "" 																			>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "5. To use MAPP, start with: " 												>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo "   > help MAPP" 																>> $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@echo ""
+	@echo '(cd  $(MAPPLOCALLINKSDIR); cd ..; tar hzcvf $(MAPPRELEASESNAPSHOTPATH).tgz $(MAPPLOCALLINKSDIRNAME) )'
+	@(cd  $(MAPPLOCALLINKSDIR); cd ..; tar hzcvf $(MAPPRELEASESNAPSHOTPATH).tgz $(MAPPLOCALLINKSDIRNAME) )
+	@echo ""
+	@echo "Release snapshot $(MAPPRELEASESNAPSHOTPATH).tgz made."
+	@echo ""
+	@echo "To set up and use MAPP: untar it somewhere (say under /where/ever/,"
+	@echo "	ie, creating /where/ever/$(MAPPLOCALLINKSDIRNAME)/),"
+	@echo "	and follow the instructions in the file 00-READ-THIS-FIRST within."
+	@echo ""
+	@echo "Note: the tarball contains soft links, extracting which correctly"
+	@echo "is important. On OSX and Windows, the default archive extraction"
+	@echo "tools typically mess these up, so try the following instead:"
+	@echo "- OSX: open a terminal and give the command tar zxvf $(MAPPRELEASESNAPSHOTPATH).tgz"
+	@echo "- Windows: use 7zip to extract. Get 7zip from http://www.7-zip.org/download.ht ml."
+
+
+
+
+autoclean: 
+	@rm -fr ./configure config.status autom4te.cache config.log ./Makefile ./start_MAPP.m startup_MAPP.m ./setuppaths_MAPP.m ./Generate_help.sh ./help/help_MAPP.txt ./help/help_MAPP.txt.in
+	@-rm -f $(MAPPTOP)/$(LOCALA1oDAEAPI)/test-scripts/MAPPtest/MAPPtest.m
+
+cleaneverything: clean autoclean
+
+clean:
+	@-rm -f $(MAPPLOCALLINKSDIR)/setuppaths_MAPP.m $(MAPPLOCALLINKSDIR)/start_MAPP.m $(MAPPLOCALLINKSDIR)/startup_MAPP.m
+	@-rm -f $(MAPPLOCALLINKSDIR)/setuppaths_MDE.m $(MAPPLOCALLINKSDIR)/startup_MDE.m
+	@-rm -fr $(MAPPLOCALLINKSDIR)/vecvalder/vv4-python/vv4/__pycache__
+	@-rm -fr $(MAPPLOCALLINKSDIR)/$(DOCUMENTATION)
+	@-rm -f $(MAPPLOCALLINKSDIR)/00-READ-THIS-FIRST
+	@-rm -f $(MAPPTOP)/MAPP-locallinks-installation
+	@-rm -f $(MAPPTOP)/vecvalder/vv4/vv4-tests/create_vv4_models_for_test_vv4_MVS_9_stage_ring_oscillator_transient.py
+	@-rm -f $(MAPPTOP)/vecvalder/vv4/vv4-tests/test_vv4_MVS_9_stage_ring_oscillator_transient.m
+	@-rm -f $(MAPPTOP)/vecvalder/vv4/vv4-tests/check_for_vv4_python_dependencies.m
+	@-rm -fr $(MAPPTOP)/vecvalder/vv4/vv4-python/vv4/__pycache__
+	@-if [ -d $(MAPPLOCALLINKSDIR) ]; then FILES=`find $(MAPPLOCALLINKSDIR) -mindepth 1 -not -type l -not -type d -print`; if [ "$$FILES" != "" ]; then echo "$(MAPPLOCALLINKSDIR) contains non-soft-links: $${FILES}"; echo "Please move the above files out of $(MAPPLOCALLINKSDIR), then run make clean again."; else echo "removing $(MAPPLOCALLINKSDIR)"; rm -fr $(MAPPLOCALLINKSDIR) $(MAPPTOP)/locallinks-are-current; fi; fi
+

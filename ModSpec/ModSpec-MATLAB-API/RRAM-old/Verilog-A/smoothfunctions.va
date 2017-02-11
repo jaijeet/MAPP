@@ -1,0 +1,267 @@
+// This Verilog-A file contains the implementations of some common smooth
+// functions and safe functions.
+// 
+// Here is a list of the available functions:
+//
+// smooth functions with inputs (x, smoothing):
+//     smoothabs, dsmoothabs, ddsmoothabs,
+//     smoothclip, dsmoothclip, ddsmoothclip,
+//     smoothstep, dsmoothstep,
+//     smoothsign, dsmoothsign,
+// 
+// smooth functions with inputs (a, b, smoothing):
+//     smoothmin, dsmoothmin_da, dsmoothmin_db,
+//     smoothmax, dsmoothmax_da, dsmoothmax_db,
+// 
+// smooth functions with inputs (a, b, x, smoothing):
+//     smoothswitch, dsmoothswitch_da, dsmoothswitch_db, dsmoothswitch_dx,
+// 
+// safe functions with inputs (x, maxslope):
+//     safeexp, dsafeexp,
+//     safesinh, dsafesinh,
+// 
+// safe functions with inputs (x, smoothing):
+//     safelog, dsafelog,
+//     safesqrt, dsafesqrt,
+//
+// Parameter smoothing controls the smoothness and accuracy of the functions.
+// The smaller smoothing is, the closer the function is to the non-smooth
+// version.
+// 
+// Parameter maxslope controls the maximum slope of safeexp and safesinh
+// functions.
+
+analog function real smoothabs;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        smoothabs = sqrt(x*x + smoothing) - sqrt(smoothing);
+    end
+endfunction // smoothabs
+
+analog function real dsmoothabs;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        dsmoothabs = x/sqrt(x*x + smoothing);
+    end
+endfunction // dsmoothabs
+
+analog function real ddsmoothabs;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        ddsmoothabs = -x/pow(smoothabs(x, smoothing), 2) *
+	    dsmoothabs(x, smoothing) + 1/smoothabs(x, smoothing);
+    end
+endfunction // ddsmoothabs
+
+analog function real smoothclip;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        smoothclip = 0.5*(smoothabs(x, smoothing) + x);
+    end
+endfunction // smoothclip
+
+analog function real dsmoothclip;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        dsmoothclip = 0.5*(dsmoothabs(x, smoothing)) + 0.5;
+    end
+endfunction // dsmoothclip
+
+analog function real ddsmoothclip;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        ddsmoothclip = 0.5*ddsmoothabs(x, smoothing);
+    end
+endfunction // ddsmoothclip
+
+analog function real smoothstep;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        smoothstep = dsmoothclip(x, smoothing);
+    end
+endfunction // smoothstep
+
+analog function real dsmoothstep;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        dsmoothstep = ddsmoothclip(x, smoothing);
+    end
+endfunction // dsmoothstep
+
+analog function real smoothsign;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        smoothsign = 2*smoothstep(x, smoothing)-1;
+    end
+endfunction // smoothsign
+
+analog function real dsmoothsign;
+    input x, smoothing;
+    real  x, smoothing;
+    begin
+        dsmoothsign = 2*dsmoothstep(x, smoothing);
+    end
+endfunction // dsmoothsign
+
+analog function real smoothmin;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        smoothmin = 0.5*(a + b - smoothabs(a-b,smoothing));
+    end
+endfunction // smoothmin
+
+analog function real dsmoothmin_da;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        dsmoothmin_da = 0.5*(1 - dsmoothabs(a-b, smoothing));
+    end
+endfunction // dsmoothmin_da
+
+analog function real dsmoothmin_db;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        dsmoothmin_db = 0.5*(1 + dsmoothabs(a-b, smoothing));
+    end
+endfunction // dsmoothmin_db
+
+analog function real smoothmax;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        smoothmax = 0.5*(a + b + smoothabs(a-b, smoothing));
+    end
+endfunction // smoothmax
+
+analog function real dsmoothmax_da;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        dsmoothmax_da = 0.5*(1 + dsmoothabs(a-b, smoothing));
+    end
+endfunction // dsmoothmax_da
+
+analog function real dsmoothmax_db;
+    input a, b, smoothing;
+    real  a, b, smoothing;
+    begin
+        dsmoothmax_db = 0.5*(1 - dsmoothabs(a-b, smoothing));
+    end
+endfunction // dsmoothmax_db
+
+analog function real smoothswitch;
+    input a, b, x, smoothing;
+    real  a, b, x, smoothing, oof;
+    begin
+        oof = smoothstep(x, smoothing);
+        smoothswitch = a*(1-oof) + b*oof;
+    end
+endfunction // smoothswitch
+
+analog function real dsmoothswitch_da;
+    input a, b, x, smoothing;
+    real  a, b, x, smoothing, oof;
+    begin
+        oof = smoothstep(x, smoothing);
+        dsmoothswitch_da = 1-oof;
+    end
+endfunction // dsmoothswitch_da
+
+analog function real dsmoothswitch_db;
+    input a, b, x, smoothing;
+    real  a, b, x, smoothing, oof;
+    begin
+        oof = smoothstep(x, smoothing);
+        dsmoothswitch_db = oof;
+    end
+endfunction // dsmoothswitch_db
+
+analog function real dsmoothswitch_dx;
+    input a, b, x, smoothing;
+    real  a, b, x, smoothing, doof;
+    begin
+        doof = dsmoothstep(x, smoothing);
+        dsmoothswitch_dx = (-a+b) * doof;
+    end
+endfunction // dsmoothswitch_dx
+
+analog function real safeexp;
+    input x, maxslope;
+    real  x, maxslope, breakpoint;
+    begin
+        breakpoint = log(maxslope);
+        safeexp = exp(x*(x <= breakpoint))*(x <= breakpoint) + 
+            (x>breakpoint)*(maxslope + maxslope*(x-breakpoint));
+    end
+endfunction // safeexp
+
+analog function real dsafeexp;
+    input x, maxslope;
+    real  x, maxslope, breakpoint;
+    begin
+        breakpoint = log(maxslope);
+        dsafeexp = exp(x*(x <= breakpoint))*(x <= breakpoint) +
+            (x>breakpoint)*maxslope;
+    end
+endfunction // dsafeexp
+
+analog function real safesinh;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        safesinh = 0.5*(safeexp(x, maxslope) - safeexp(-x, maxslope));
+    end
+endfunction // safesinh 
+
+analog function real dsafesinh;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        dsafesinh = 0.5*(dsafeexp(x, maxslope) - dsafeexp(-x, maxslope));
+    end
+endfunction // dsafesinh 
+
+analog function real safelog;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        safelog = log(smoothclip(x, smoothing) + 1e-16);
+    end
+endfunction // safelog
+
+analog function real dsafelog;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        dsafelog = 1/(smoothclip(x, smoothing) + 1e-16)
+            * dsmoothclip(x, smoothing);
+    end
+endfunction // dsafelog
+
+analog function real safesqrt;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        safesqrt = sqrt(smoothclip(x, smoothing) + 1e-16);
+    end
+endfunction // safesqrt
+
+analog function real dsafesqrt;
+    input x, maxslope;
+    real  x, maxslope;
+    begin
+        dsafesqrt = 0.5 / sqrt(smoothclip(x, smoothing) + 1e-16) 
+            * dsmoothclip(x, smoothing);
+    end
+endfunction // dsafesqrt

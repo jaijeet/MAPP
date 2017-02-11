@@ -1,0 +1,12 @@
+simulator lang=spectre
+
+ahdl_include "RRAM_v0.va"
+
+Vin (in 0) vsource type=pulse val0=-1 val1=1 delay=1u rise=4m fall=4m width=1u period=8m+2u
+X1 (in 0) RRAM_v0
+
+// DC analysis
+dc dc dev=Vin start=-1 stop=1 lin=100 
+
+// transient simulation
+tran tran stop=8m 

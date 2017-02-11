@@ -1,0 +1,166 @@
+CYGWINPREFIX=@CYGWINPREFIX@
+OS=@OS@
+MODSPECTOP=`pwd`
+MODSPECVERSION=@MODSPECVERSION@
+MODSPECINSTALLTOPDIR=$(CYGWINPREFIX)@prefix@
+	# WATCH OUT for terminating spaces in the above!
+MODSPECINSTALLLIBDIR=$(MODSPECINSTALLTOPDIR)/lib/ModSpec
+MODSPECINSTALLMATLABAPIDIR=$(MODSPECINSTALLLIBDIR)/ModSpec-MATLAB-API
+MODSPECINSTALLBINDIR=$(MODSPECINSTALLTOPDIR)/bin
+MODSPECINSTALLDOCDIR=$(MODSPECINSTALLTOPDIR)/doc
+#RELVERSIONCMD=`head -n 1 00-VERSION | sed -e 's/ /_/g'`
+#RELVERSION="${RELVERSIONCMD}"
+RELVERSION=$(MODSPECVERSION)
+#RELVERSIONEXT="${RELVERSIONCMD}-release"
+RELVERSIONEXT="$(RELVERSION)-release"
+VECVALDERINSTALLDIR=@VECVALDERINSTALLDIR@
+TMPDIR=/var/tmp
+
+MATLAB_SUBDIRS = ModSpec-MATLAB-API ModSpec-MATLAB-API/smoothingfuncs ModSpec-MATLAB-API/utils ModSpec-MATLAB-API/test-scripts
+
+cplusplus: 
+	@(cd ModSpec-C++-API; make)
+	@(cd ModSpec-C++-API/tests-for-Xyce; make)
+
+matlab: ./ModSpec-MATLAB-API/utils/setuppaths_ModSpec.m pcode
+	@echo "Next step:"
+	@echo "	$$ make install # will install to $(MODSPECINSTALLTOPDIR)"
+	@echo ""
+	@echo "  [To clean up:"
+	@echo "  	$$ make clean # remove make-generated files (eg, ./ModSpec-MATLAB-API/staging)"
+	@echo "  	$$ make installclean # remove installation in $(MODSPECINSTALLTOPDIR)"
+	@echo "  	$$ make autoclean # remove autoconf-generated files"
+	@echo "  	$$ make cleaneverything # do all the above"
+	@echo "  ]"
+	@echo ""
+
+all: matlab cplusplus
+
+staging: 
+	@if [ ! -e ModSpec-MATLAB-API/staging ]; then mkdir ModSpec-MATLAB-API/staging; fi
+	@cd ModSpec-MATLAB-API/staging; ln -s ../*.m ../smoothingfuncs/*.m ../utils/*.m .
+	@echo "ModSpec-MATLAB-API/staging/ directory with soft links created."
+
+./ModSpec-MATLAB-API/utils/setuppaths_ModSpec.m: ./ModSpec-MATLAB-API/utils/setuppaths_ModSpec_template.m
+	@echo "creating $@";
+	@cat $< | sed -e 's#__VECVALDERINSTALLDIR__#$(VECVALDERINSTALLDIR)#g' -e 's#__MODSPECMATLABAPIDIR__#$(MODSPECINSTALLMATLABAPIDIR)#g' >| $@;
+	@
+
+
+makeMODSPECINSTALLDIRS: installclean
+	@ mkdir -p $(MODSPECINSTALLLIBDIR)
+	@ echo "created $(MODSPECINSTALLLIBDIR)"
+	@ mkdir -p $(MODSPECINSTALLMATLABAPIDIR)
+	@ echo "created $(MODSPECINSTALLMATLABAPIDIR)"
+	@ mkdir -p $(MODSPECINSTALLBINDIR)
+	@ echo "created $(MODSPECINSTALLBINDIR)"
+	@ mkdir -p $(MODSPECINSTALLDOCDIR)
+	@ echo "created $(MODSPECINSTALLDOCDIR)"
+	@ echo ""
+
+pcode: ./ModSpec-MATLAB-API/utils/setuppaths_ModSpec.m
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(fname=$$(echo $$dir/*.m | awk '{print $$1}'); if [ -e $$fname ]; then cd $$dir; echo "making pcode in $$dir"; echo "pcode *.m" | matlab -nodesktop -nosplash -nojvm; fi) \
+	done
+
+installsrc: installsrcreal installmsg
+
+installsrcreal: makeMODSPECINSTALLDIRS
+	@(head -n 1 00-VERSION >| $(MODSPECINSTALLLIBDIR)/00-VERSION)
+	@(cd ModSpec-MATLAB-API; tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude "smoothingfuncs/bad*" --exclude "smoothingfuncs/saved_plots" -cf - . | (cd $(MODSPECINSTALLMATLABAPIDIR); tar xf -))
+	@(cd doc; tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk -cf - . | (cd $(MODSPECINSTALLDOCDIR); tar xf -))
+	@(cd ModSpec-C++-API; install -vp *.so $(MODSPECINSTALLLIBDIR);  install -vs test_ModSpec_Element_using_dlopen $(MODSPECINSTALLBINDIR);)
+	@(cd ModSpec-C++-API/tests-for-Xyce; install -vs test_nExtvars_nIntvars_jacStamp_MNA test_parameter_register_get $(MODSPECINSTALLBINDIR);)
+	@chmod -R a+rX $(MODSPECINSTALLTOPDIR)
+	@echo "Done with installation."
+	@echo ""
+
+install: installreal installmsg
+
+installmsg:
+	@echo "---------------------------------------------------------------"
+	@echo "To use/test the ModSpec C++ API, see steps IV and V in $(MODSPECINSTALLDOCDIR)/0-how-to-compile-and-run-the-ModSpec-C++-API."
+	@echo ""
+	@echo "---------------------------------------------------------------"
+	@echo "To use/test the ModSpec MATLAB API, start MATLAB and:"
+	@echo '	> addpath '"$(MODSPECINSTALLMATLABAPIDIR)/utils"
+	@echo '	> setuppaths_ModSpec;'
+	@echo '	> run_ALL_ModSpec_tests;'
+	@echo ""
+	@echo "See $(MODSPECINSTALLMATLABAPIDIR)/0-README for more information."
+	@echo ""
+
+installreal: all makeMODSPECINSTALLDIRS
+	@(head -n 1 00-VERSION >| $(MODSPECINSTALLLIBDIR)/00-VERSION)
+	@(cd ModSpec-MATLAB-API; tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude "smoothingfuncs/bad*" --exclude "smoothingfuncs/saved_plots" --exclude "*.m" -cf - . | (cd $(MODSPECINSTALLMATLABAPIDIR); tar xf -))
+	@(cd doc; tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk -cf - . | (cd $(MODSPECINSTALLDOCDIR); tar xf -))
+	@(cd ModSpec-C++-API; install -vp *.so $(MODSPECINSTALLLIBDIR);  install -vs test_ModSpec_Element_using_dlopen $(MODSPECINSTALLBINDIR);)
+	@(cd ModSpec-C++-API/tests-for-Xyce; install -vs test_nExtvars_nIntvars_jacStamp_MNA test_parameter_register_get $(MODSPECINSTALLBINDIR);)
+	@chmod -R a+rX $(MODSPECINSTALLTOPDIR)
+	@echo "Done with (pcode) installation."
+	@echo ""
+	@echo "---------------------------------------------------------------"
+	@echo "To use/test the ModSpec C++ API, see steps IV and V in $(MODSPECINSTALLDOCDIR)/0-how-to-compile-and-run-the-ModSpec-C++-API."
+	@echo ""
+	@echo "---------------------------------------------------------------"
+	@echo "To use/test the ModSpec MATLAB API, start MATLAB and:"
+	@echo '	> addpath '"$(MODSPECINSTALLMATLABAPIDIR)/utils"
+	@echo '	> setuppaths_ModSpec;'
+	@echo '	> MOD = capModSpec();'
+	@echo '	> run_ModSpec_functions(MOD, ''capModSpec'');'
+	@echo '	> MOD = DAAV6ModSpec();'
+	@echo '	> run_ModSpec_functions(MOD, ''DAAV6ModSpec'');'
+	@echo '	> run_ALL_ModSpec_tests;'
+	@echo ""
+	@echo "See $(MODSPECINSTALLMATLABAPIDIR)/0-README for more information."
+	@echo ""
+
+
+installclean:
+	@echo "removing $(MODSPECINSTALLTOPDIR)..."
+	@rm -fr $(MODSPECINSTALLTOPDIR)
+	@echo ""
+
+autoclean: 
+	@rm -fr ./configure config.status autom4te.cache config.log ./Makefile ./ModSpec-C++-API/Makefile ./ModSpec-C++-API/tests-for-Xyce/Makefile
+
+cleaneverything: clean installclean autoclean
+
+clean:
+	@if [ -d ./ModSpec-MATLAB-API/staging ]; then FILES=`find ./ModSpec-MATLAB-API/staging -mindepth 1 -not -type l -print`; if [ "$$FILES" != "" ]; then echo "./ModSpec-MATLAB-API/staging contains non-soft-links: $${FILES}"; echo "Please move the above files out of ./ModSpec-MATLAB-API/staging/, then run make clean again."; else echo "removing ./ModSpec-MATLAB-API/staging/."; rm -fr ./ModSpec-MATLAB-API/staging; fi; fi
+	@rm -f ModSpec-MATLAB-API/utils/setuppaths_ModSpec.m
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(cd $$dir; echo "cleaning pcode in $$dir"; rm -f *.p;) \
+	done
+	@(cd ModSpec-C++-API/tests-for-Xyce; make clean)
+	@(cd ModSpec-C++-API; make clean)
+
+
+snapshot:
+	@echo "making snapshot ${RELVERSION}..."
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@ln -sT ${MODSPECTOP} ${TMPDIR}/${RELVERSION}
+	@cd ${TMPDIR}/${RELVERSION}; if [ -e Makefile ]; then make -i autoclean; fi
+	@tar -C ${TMPDIR} --exclude "*.svn" --exclude */staging --exclude ./not-in-svn --exclude ./junk --exclude ./amsallem -hzcvf "${TMPDIR}/${RELVERSION}".tgz "${RELVERSION}" > /dev/null
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@echo MODSPEC snapshot tarball ${TMPDIR}/${RELVERSION}.tgz created.
+	@echo ""
+
+release:
+	@echo "making release ${RELVERSIONEXT}..."
+	@echo ""
+	@cd ${MODSPECTOP}; if [ -e Makefile ]; then make -i autoclean; fi
+	@cd ${MODSPECTOP}; autoconf; rm -fr autom4te.cache
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@mkdir ${TMPDIR}/${RELVERSIONEXT}
+	@tar -C ${MODSPECTOP} --exclude */staging --exclude ./not-in-svn --exclude ./junk --exclude ./amsallem -hcf - . | tar -C ${TMPDIR}/${RELVERSIONEXT} -xf -
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}/configure.ac
+	@cd ${TMPDIR}/${RELVERSIONEXT}; if [ -e Makefile ]; then make -i autoclean; fi
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}.tgz
+	@tar -C ${TMPDIR} --exclude */staging --exclude "*.svn" -hzcvf "${TMPDIR}/${RELVERSIONEXT}".tgz "${RELVERSIONEXT}" > /dev/null
+	@echo ""
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@echo MODSPEC release tarball ${TMPDIR}/${RELVERSIONEXT}.tgz created.
+	@echo ""

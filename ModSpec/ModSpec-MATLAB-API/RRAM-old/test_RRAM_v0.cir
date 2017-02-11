@@ -1,0 +1,10 @@
+* test RRAM_v0.va in DC, TRAN
+
+Vin in 0 DC -1 pulse(-1 1 1u 4m 4m 1u 8m)
+YRRAM_v0 X1 in 0
+
+* DC analysis
+* .dc Vin -1 1 0.01
+
+* transient simulation
+.tran 1u 8m

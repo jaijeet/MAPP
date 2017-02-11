@@ -1,0 +1,14 @@
+Quickstart:
+	- autoconf
+	- ./configure [--prefix=/where/to/install/DAEAPI] 
+		      [--with-ModSpecInstallDir=/where/ModSpec/is/installed]
+		      [--with-vecvalderInstallDir=/where/vecvalder/is/installed]
+		      [--with-NetlistParserForDAEAPIInstallDir=/where/NetlistParser-for-DAEAPI/is/installed]
+		      # defaults are under $HOME/local/pkgs/
+	- make
+	- make install
+	- follow the instructions at the end of make install to test.
+
+	- for development
+	  - cd staging/
+	  - run run_ALL_DAEAPI_tests.m in matlab

@@ -1,0 +1,143 @@
+# Author: JR, 2012/08/08
+
+# definitions
+#TRIL_ARCHDIR=/home/jr/local/pkgs/trilinos-10.10.3_x86_64_precise
+TRIL_ARCHDIR=@TRILINOSINSTALLDIR@
+TRIL_VERSION=@TRIL_VERSION@
+OS=@OS@
+#TRILINC = -I$(abspath /home/jr/local/pkgs/trilinos-10.6.4-x86_64/include/)
+#TRILLDFLAGS = -L$(abspath /home/jr/local/pkgs/trilinos-10.6.4-x86_64/lib) -lteuchos
+TRILINC = -I$(abspath $(TRIL_ARCHDIR)/include/)
+TEUCHOSLIBS = -lteuchoscore -lteuchosnumerics -lteuchosremainder -lteuchoscomm -lteuchosparameterlist
+
+ifeq ($(TRIL_VERSION),"10.10.3")
+  # For compiling on install machine
+  TRILLDFLAGS = -L$(abspath $(TRIL_ARCHDIR)/lib) -lteuchos
+else
+  TRILLDFLAGS = -L$(abspath $(TRIL_ARCHDIR)/lib) $(TEUCHOSLIBS)
+endif
+
+EXTRALIBS=@EXTRALIBS@ # should come from ./configure --with-extralibs="-L libpath1 -Llibpath2 -lwhatever"
+EXTRAINCLUDES=@EXTRAINCLUDES@ # should come from ./configure --with-extralibs="-Iincludepath1 -Iincludepath2"
+
+#BOOSTINCLUDES = /usr/include/boost # Ubuntu libboost-all-dev
+#BOOSTLIBS= -L $(abspath /usr/lib/)
+
+CXX = g++
+CXXFLAGS = -g -std=gnu++0x
+CXXFLAGS = -g -fPIC # -fPIC is needed for creating .so files
+INCLUDES = -I$(abspath ./utils) -I$(abspath ./smoothingfuncs) $(TRILINC) $(EXTRAINCLUDES)
+LIBFLAGS = $(TRILLDFLAGS) -ldl $(EXTRALIBS)
+
+##############
+# targets don't come with their own .h files
+SHAREDLIB_SRCS = vsrcModSpec.C \
+				 isrcModSpec.C \
+				 capModSpec.C \
+				 indModSpec.C \
+				 diodeModSpec.C \
+				 resModSpec.C \
+				 resModSpec_directly_from_ModSpec_Element.C \
+				 simpleDiodeModSpec_directly_from_ModSpec_Element.C \
+				 MVS_1_0_1_ModSpec.C \
+				 vcvsModSpec.C \
+				 vccsModSpec.C \
+				 cccsModSpec.C \
+				 ccvsModSpec.C \
+				 EbersMoll_BJT_ModSpec.C \
+				 damped_pendulum_DAE.C \
+				 vsrcRCL_ckt.C \
+				 MNA_DAE.C 
+TARGET_SRCS = test_ModSpec_Element_using_dlopen.C \
+			  generate_Xyce_plugin_from_ModSpec_Element.C
+SRCS_W_HDRS = utils/untyped.C utils/eString.C utils/vector_print.C
+# these below are not targets but don't come with their own .h files
+OTHER_SRCS = 
+
+DOT_O_ARCHIVE =
+
+# headers on which everything depends
+CORE_HDRS = ModSpec_Element.h
+
+ARCHIVES_FROM_SUBDIRS = ./utils/utils.a ./smoothingfuncs/smoothingfuncs.a # created by running make in smoothingfuncs/
+
+EXTRACLEANS = utils/test_untyped
+##############
+# end definitions
+
+TARGETS = $(TARGET_SRCS:.C=)
+
+SHAREDLIBS = $(SHAREDLIB_SRCS:.C=.so)
+
+HDRS = $(SRCS_W_HDRS:.C=.h)
+
+SHAREDLIB_OBJS = $(SHAREDLIB_SRCS:.C=.o)
+OBJS_W_HDRS = $(SRCS_W_HDRS:.C=.o) 
+OTHER_OBJS = $(OTHER_SRCS:.C=.o)
+ARCHIVE_SUBDIRS = $(dir $(ARCHIVES_FROM_SUBDIRS))
+
+all: $(SHAREDLIBS) $(TARGETS)
+
+.PHONY: all clean do_subdirs subdirs_clean
+
+do_subdirs:
+	@for dir in $(SUBDIRS); do \
+		$(MAKE) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LIBFLAGS="$(LIBFLAGS)" -C $$dir; \
+	done
+
+archive_subdirs_clean:
+	@for dir in $(ARCHIVE_SUBDIRS); do \
+		$(MAKE) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LIBFLAGS="$(LIBFLAGS)" -C $$dir clean; \
+	done
+
+subdirs_clean:
+	@for dir in $(SUBDIRS); do \
+		$(MAKE) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LIBFLAGS="$(LIBFLAGS)" -C $$dir clean; \
+	done
+
+# static pattern rule to create all ARCHIVES_FROM_SUBDIRS
+$(ARCHIVES_FROM_SUBDIRS): %: $(wildcard $(@D)/*.h) $(wildcard $(@D)/*.C)
+	@for dir in $(@D); do \
+		$(MAKE) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" INCLUDES="$(INCLUDES)" LIBFLAGS="$(LIBFLAGS)" -C $$dir $(@F); \
+	done
+
+# static pattern rules to create all .o files
+$(OBJS_W_HDRS): %.o: %.C %.h $(CORE_HDRS)
+	$(CXX) -c $(CXXFLAGS) $(INCLUDES) -o $@ $<
+
+$(OTHER_OBJS): %.o: %.C $(CORE_HDRS)
+	$(CXX) -c $(CXXFLAGS) $(INCLUDES) -o $@ $<
+
+$(SHAREDLIB_OBJS): %.o: %.C %.h $(CORE_HDRS)
+	$(CXX) -c $(CXXFLAGS) $(INCLUDES) -o $@ $< $(LIBFLAGS)
+
+# rule to create archive of .os
+$(DOT_O_ARCHIVE): $(OTHER_OBJS) $(OBJS_W_HDRS)
+	ar rs $@ $^
+
+# static pattern rule to compile all targets
+$(TARGETS): %: %.C $(CORE_HDRS) $(DOT_O_ARCHIVES) $(ARCHIVES_FROM_SUBDIRS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $< $(DOT_O_ARCHIVE) $(ARCHIVES_FROM_SUBDIRS) $(LIBFLAGS)
+
+# static pattern rule to compile all shared libraries
+$(SHAREDLIBS): %.so: %.o $(DOT_O_ARCHIVE) $(ARCHIVES_FROM_SUBDIRS)
+	$(CXX) $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $< $(ARCHIVES_FROM_SUBDIRS) $(DOT_O_ARCHIVE) $(LIBFLAGS)
+
+#ifeq below doesn't work right - 2012/11/18 - .so files not created
+#ifeq ($(OS),"linux")
+#	$(CXX) $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $< $(ARCHIVES_FROM_SUBDIRS) $(DOT_O_ARCHIVE) $(LIBFLAGS)
+#else ifeq ($(OS),"macosx")
+#	$(CXX) $(CXXFLAGS) -shared -dynamiclib -flat_namespace -o $@ $< $(ARCHIVES_FROM_SUBDIRS) $(DOT_O_ARCHIVE) $(LIBFLAGS)
+#	# OSX: g++ -Wall -dynamiclib -flat_namespace -Iinc <source files> -o <output dynamic library>.so
+#	# see http://www.cplusplus.com/forum/unices/14558/
+#endif
+
+clean:	subdirs_clean archive_subdirs_clean
+	- rm -f $(DOT_O_ARCHIVE) $(OBJS_W_HDRS) $(OTHER_OBJS) $(SHAREDLIB_OBJS) $(TARGETS) $(SHAREDLIBS) $(EXTRACLEANS)
+
+#this is how you link shared libs at compile time:
+#test-Res_ModSpec_Element_two:  sharedlib test-Res_ModSpec_Element.C
+#	- g++ $(CXXFLAGS) $(INCLUDES) -c test-Res_ModSpec_Element.C
+#	- g++ $(CXXFLAGS) $(INCLUDES) -o test-Res_ModSpec_Element test-Res_ModSpec_Element.o -L. -lModSpecDevices
+#	# run this as: LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ldd  ./test-Res_ModSpec_Element
+#	# this does not need dlopen at all

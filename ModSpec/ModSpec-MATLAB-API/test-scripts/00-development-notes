@@ -1,0 +1,126 @@
+Tests on ModSpec: plans, notes and thoughts. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			Nov 16th 2012
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+TODOs: 
+1) Structure of tests:
+   - Desired usage: 
+	run_ALL_tests_on_***()
+		generates _long_ lists (better forms) of
+		results. ( as well as .log file)
+	update_ALL_tests_on_***()
+		when you feel satisfied with the current
+		version. 
+		run_ALL_tests_on_***('update')
+	test_***()
+		separate tests. Generates lists and logs. 
+	test_***('update')
+		separate tests. Generates lists and logs. 
+	print_test_results('....mat')
+		not just lists, but also results. 
+	print_ALL_test_results_on_***()
+   - Implementation thoughts: 
+	- should test "static" output and also "dynamic" ones
+	  (ie. test functions with different input)
+		- keep track of number of points
+		- include totally random points, check for NaN
+		- keep everything in .mat file (eg. 
+			test_capModSpec.mat)
+		  organize .mat files in a folder test-data
+		  organize .m files in a folder test-scripts
+	- is run_***_functions sufficient? 
+	- what if we want to change test-scripts?
+		- first change run_***_functions
+		- update_ALL_tests_on_***
+	- what if we want to add a new model or DAE?
+		- add test_*** in the right place
+			call run_***_functions
+	- How to generate testcases in the first place?
+		run_ALL_tests_on_***, check for
+			No test-data folder? Make one!
+		run_***_functions, check for
+			No name.mat? Make one!
+			[dtests, rtests] = generate_cases_M/D...
+				(n_dtests, n_rtests, MOD/DAE)
+   - File structure:
+	- two folders: 
+		- test-scripts: .m files
+		- test-data: 	.mat files
+		  move original scripts to test-scripts-old
+	- .mat data structure: 
+		- _name_.mat, name MOD.name???
+		  Should be given. HOW???
+		  test_***(), test_***('update'), 
+		  call run_ModSpec/DAEAPI_functions(MOD/DAE, name, 'update')
+		- static test data:
+		  stests
+		- dynamic test data: 
+		  dtests cellarray of cellarrays
+			dtests{1} = {vecX,vecY,u,fqei,...}
+		  rtests
+			{n_rtests, {vecX, ...}}
+			rtests{2} is template
+	- bottom level functions:
+		run_ModSpec_functions(MOD, name, 'update')
+		run_DAEAPI_functions(DAE, name, 'update')
+			generate_cases_ModSpec
+			generate_cases_DAEAPI
+	- middle level functions: 
+		test_***ModSpec('update')
+		test_***DAEAPI('update')
+		test_MNA_***('update')
+			a lot of files
+	- top level functions:
+		run_ALL_tests_on_ModSpec()
+		run_ALL_tests_on_DAEAPI()
+		run_ALL_tests_on_MNA_EqnEngine()
+   - Output design: 
+	testing **** ...		pass
+	testing **** ...		pass
+	testing **** ...		pass
+	testing **** ...		_fail_
+		testing results:
+		ans = 
+		reference results: 
+		ans = 
+	testing **** ...		pass
+	testing **** ...		pass
+	...
+	Summary: 
+
+2) Tests on ModSpec:
+done	- generate_cases_ModSpec(n_dtests, n_rtests, MOD)
+	  What is needed in tests_on_ModSpec? 
+		vecX, vecY, vecU, vecXold, vecYold.  
+done	- run_ModSpec_functions(MOD, name, 'update')
+		load .mat if not exist && 'update', generate
+		feval --> if 'update' then write and print
+		if other, then compare --> is_equal? 
+		print_success:print_failure. 
+
+done	- test_***ModSpec('update')
+
+done	- run_ALL_ModSpec_tests()
+
+
+3) Tests on DAEAPI:
+done	- generate_cases_DAEAPI(n_dtests, n_rtests, DAE)
+	  What is needed in tests_on_DAEAPI? 
+		x, u, xold
+done	- run_DAEAPI_functions(DAE, name, 'update')
+	Note: rng shuffle;
+		first check matlab version!!
+		do the same for ModSpec
+
+done	- test_***DAEAPI('update')
+
+done	- run_ALL_DAEAPI_tests()
+	
+4) Others: 
+done	- add version check to ModSpec run_ModSpec_functions
+	  % rng shuffle (should check matlab version >=2011a)
+	  % use this instead
+	  % rand('seed',  etime(clock, [1900, 1, 1, 0, 0, 0]));
+	- add help string to test_***
+

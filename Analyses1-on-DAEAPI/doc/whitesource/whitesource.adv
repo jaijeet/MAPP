@@ -1,0 +1,33 @@
+* run this thing a billion times with different table sources
+
+* i1 is a noise current source with stationary PSD almost flat upto a point
+*	see whitesource.tex
+.use i1.adv
+
+* a voltage source to capture the current
+vsens 1 2 0
+
+* an rc filter to shape the noise
+* pole at 10KHz, dc gain of 1
+r1 2 0 1
+c1 2 0 15.91549432737563e-6
+
+* v2 is a sinusoidal voltage cos(wt) at node 3
+*           ofs amp freq  delay  damping  phase
+*** v2 3 0 sin (0.0 1.0 1MEG 0.0    0.0      90)
+
+*** rdum2 3 0 10K
+
+* e1 is a multiplier multiplying v1 and v2
+* vout = a0 + a1 v1 + a2 v2 + a3 v1^2 + a4 v1 v2 + a5 v2^2 + ...
+*               inp1  inp2   a0  a1  a2  a3  a4
+*** e1 4 0 poly(2)   2 0   3 0   0.0 0.0 0.0 0.0 1.0 
+
+*** rdum3 4 0 10K
+
+.out iin vsens
+.out v2 2 0
+*** .out v3 3 0
+*** .out v4 4 0
+
+.end

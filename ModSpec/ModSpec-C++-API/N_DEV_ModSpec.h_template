@@ -1,0 +1,180 @@
+#ifndef Xyce_N_DEV_@{model_name}_h
+#define Xyce_N_DEV_@{model_name}_h
+
+#include <N_DEV_fwd.h>
+#include <N_DEV_Configuration.h>
+#include <N_DEV_DeviceInstance.h>
+#include <N_DEV_DeviceModel.h>
+#include <N_DEV_DeviceMaster.h>
+
+#include "Xyce_ModSpec_Interface.h"
+
+namespace Xyce {
+namespace Device {
+namespace @{model_name} {
+
+class Model;
+class Instance;
+
+struct Traits : public DeviceTraits<Model, Instance>
+{
+    static const char *name() {return "@{model_name}";}
+    static const char *deviceTypeName() {return "@{model_name}";}
+    static int numNodes() {return @{nNodes};}
+    static bool isLinearDevice() {return false;}
+
+    static Device *factory(const Configuration &configuration, const FactoryBlock &factory_block);
+    static void loadModelParameters(ParametricData<Model> &p);
+    static void loadInstanceParameters(ParametricData<Instance> &p);
+};
+
+/**
+ * @{model_name} device instance.
+ *
+ * An instance is created for each occurance of the device in the netlist.
+ *
+ */
+class Instance : public DeviceInstance
+{
+    friend class ParametricData<Instance>;              ///< Allow ParametricData to changes member values
+    friend class Model;
+    friend class Traits;
+    friend class Master;
+
+public:
+    Instance(
+       const Configuration &     configuration,
+       const InstanceBlock &     instance_block,
+       Model &                   model,
+       const FactoryBlock &      factory_block);
+
+    ~Instance() {}
+
+private:
+    Instance(const Instance &);
+    Instance &operator=(const Instance &);
+  
+public:
+    Model &getModel() {
+        return model_;
+    }
+
+    virtual void registerLIDs(const std::vector<int> & intLIDVecRef, const std::vector<int> & extLIDVecRef) /* override */;
+    virtual void registerStateLIDs(const std::vector<int> & staLIDVecRef) /* override */;
+    virtual void registerStoreLIDs(const std::vector<int> & stoLIDVecRef) /* override */;
+    virtual void registerJacLIDs(const std::vector< std::vector<int> > & jacLIDVec) /* override */;
+
+    virtual void registerBranchDataLIDs(const std::vector<int> & branchLIDVecRef) /* override */;
+    virtual void loadNodeSymbols(Util::SymbolTable &symbol_table) const /* override */;
+
+    virtual bool processParams(string param = "") /* override */;
+    virtual bool updateTemperature(const double & temp_tmp) /* override */;
+    virtual bool updateIntermediateVars() /* override */;
+    virtual bool updatePrimaryState() /* override */;
+
+    virtual const std::vector< std::vector<int> > &jacobianStamp() const  /* override */ {
+        return jacStamp;
+    }
+
+    virtual bool loadDAEFVector() /* override */;
+    virtual bool loadDAEdFdx() /* override */;
+    virtual bool loadDAEQVector() /* override */;
+    virtual bool loadDAEdQdx() /* override */;
+
+    virtual void setupPointers() /* override */;
+
+protected:
+    Xyce_ModSpec_Interface* XMIp;
+    ModSpec_Element* ModSpecElPtr;
+
+private:
+    static std::vector< std::vector<int> >  jacStamp; ///< All @{model_name} have a common Jacobian Stamp
+
+    Model &     model_;                 ///< Owning model
+
+    // User-specified parameters:
+    @{declare_parms}
+
+    double temp;    //  Temperature (K)
+};
+
+
+/**
+ * @{model_name} model
+ *
+ */
+class Model : public DeviceModel
+{
+    friend class ParametricData<Model>;               ///< Allow ParametricData to changes member values
+    friend class Instance;                            ///< Don't force a lot of pointless getters
+    friend class Traits;
+    friend class Master;                              ///< Don't force a lot of pointless getters
+
+public:
+    typedef std::vector<Instance *> InstanceVector;
+
+    Model(
+       const Configuration &       configuration,
+       const ModelBlock &        model_block,
+       const FactoryBlock &      factory_block);
+    ~Model();
+
+private:
+    Model();
+    Model(const Model &);
+    Model &operator=(const Model &);
+
+public:
+  
+    void addInstance(Instance *instance) 
+    {
+      instanceContainer.push_back(instance);
+    }
+  
+    virtual void forEachInstance(DeviceInstanceOp &op) const /* override */;
+  
+    virtual std::ostream &printOutInstances(std::ostream &os) const;
+  
+    virtual bool processParams() /* override */;
+    virtual bool processInstanceParams() /* override */;
+  
+private:
+    InstanceVector      instanceContainer;            ///< List of owned intances
+
+protected:
+    Xyce_ModSpec_Interface* XMIp;
+    ModSpec_Element* ModSpecElPtr; //
+
+
+private:
+    // Model parameters
+    std::string SONAME;
+};
+
+
+/**
+ * @{model_name} master
+ *
+ */
+class Master : public DeviceMaster<Traits>
+{
+    friend class Instance;                            ///< Don't force a lot of pointless getters
+    friend class Model;                               ///< Don't force a lot of pointless getters
+
+public:
+    Master(
+       const Configuration &     configuration,
+       const FactoryBlock &      factory_block,
+       const SolverState &       solver_state,
+       const DeviceOptions &     device_options)
+      : DeviceMaster<Traits>(configuration, factory_block, solver_state, device_options)
+    {}
+};
+
+void registerDevice();
+
+} // namespace @{model_name}
+} // namespace Device
+} // namespace Xyce
+
+#endif

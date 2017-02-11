@@ -1,0 +1,92 @@
+[Last updated 2013/11/05: JR].
+[previous update: 2012/10/04: JR].
+
+The following steps are required to compile/use the ModSpec C++ API.
+
+I.   Install needed utilities and libraries.
+II.  Compile and install the Trilinos libraries.
+III. Compile the ModSpec C++ API.
+IV.  Run basic tests on the ModSpec C++ API.
+V.   (optional) Compile and run programs related to the Xyce-ModSpec interface
+     (incomplete and ongoing as of 2012/10/04).
+
+I. On ubuntu (12.04 = Precise Pangolin; 2013/11/05: 13.04=raring ringtail), 
+   install the following packages using your favourite package manager, eg, apt-get or synaptic:
+
+   [TODO: NEED TO UPDATE VERSIONS FOR 13.04]
+   - gcc, g++ and gfortran (version 4.6.3 works)
+   - cmake (version 2.8.7 works)
+   - flex (v 2.5.35 works)
+   - bison (v 2.5 works)
+   - liblapack-dev (v 3.3.1 works)
+   - libunwind7-dev (v 0.99-0.3 works)
+   - libsuperlu-dev (v 3.0+20070106-3 works)
+   - libsuitesparse-dev (1:3.4.0-2ubuntu3)
+     - this includes libumfpack.{a,so} (v 5.4.0), and libamd.{a,so} (v 2.2.0);
+       removing the need for compiling and installing the Trilinos "third
+       party libraries" UMFPACK and AMD that Trilinos relies on. (The source
+       for that is in [XyceSVN]/Xyce/trunk/src-pkgs/Trilinos3PL_Small.tgz).
+   - libboost-all-dev
+
+II. Install Trilinos version 10.10.3 (tested on 2012/10/04 to work
+    with ModSpec C++ API SVN revision r36).
+    [NOTE: tril-10.10.3 broke with gcc 4.7.3 on Ubuntu 13.04; however, 
+     tril-11.4.2 compiled.]
+
+    - Download the stock source for 10.10.3 from the trilinos website.
+    - untar it: say into ./trilinos-10.10.3-Source/.
+    - make a build directory outside the trilinos source tree: say ./T-build/
+    - cd ./T-build
+    - cp [ModSpec-SVN]/trunk/doc/cmake_trilinos.linux_ubuntu_precise .
+    - edit cmake_trilinos.linux_ubuntu_precise and check/change:
+      - SRCDIR (to point to trilinos-10.10.3-Source/)
+      - ARCHDIR (to point to the desired installation directory)
+      - -DAMD_LIBRARY_DIRS (to point to where libamd.a is
+        - this is part of libsuitesparse)
+      - -DTPL_AMD_INCLUDE_DIRS (to point to where amd.h is
+        - this is part of libsuitesparse)
+      - -DUMFPACK_LIBRARY_DIRS (to point to where libumfpack.a is
+        - this is part of libsuitesparse)
+      - -DTPL_UMFPACK_INCLUDE_DIRS (to point to where amd.h is
+        - this is part of libsuitesparse)
+    - chmod +x ./cmake_trilinos.linux_ubuntu_$DIST where DIST=precise or raring
+    - ./cmake_trilinos.linux_ubuntu_$DIST
+      - it should complete with no errors
+    - make -j 8
+    - make install
+      - will install the trilinos headers and libraries under $ARCHDIR
+    - (optional, but a good idea) if your ARCHDIR above was not /usr/local (or
+      some other standard system directory, or some directory in your
+      environmental variable LD_LIBRARY_PATH), make sure you make soft links
+      to all the installed files to under /usr/local. Eg, using the script
+      link-tree.
+
+III. Compile the ModSpec C++ API.
+
+    - cd [ModSpec-SVN]/trunk/ModSpec-C++-API/
+    - autoconf
+    - ./configure # [--prefix=/where/to/install/ModSpec]
+      [--with-trilinosInstallDir=/where/trilinos/is/installed]
+      # default locations are under $HOME/local/pkgs/
+    - make
+    - make install
+
+IV. Run basic tests:
+    - to use the ModSpec-MATLAB-API, also see ./ModSpec-MATLAB-API/0-README
+    - to use the ModSpec-C++-API, also see ./ModSpec-C++-API/0-README
+    - (OLD)
+      - cd [ModSpec-SVN]/trunk/ModSpec-C++-API/
+      - LD_LIBRARY_PATH="<TRILINOS_ARCHDIR>/lib:$LD_LIBRARY_PATH" \
+      	./test_ModSpec_Element_using_dlopen ./Res_ModSpec_Element.so
+      - LD_LIBRARY_PATH="<TRILINOS_ARCHDIR>/lib:$LD_LIBRARY_PATH" \
+      	./test_ModSpec_Element_using_dlopen ./DAAV6_ModSpec_Element.so
+      - LD_LIBRARY_PATH="<TRILINOS_ARCHDIR>/lib:$LD_LIBRARY_PATH" \
+      	./test_ModSpec_Element_using_dlopen ./RLC_ModSpec_Element.so
+
+V.  Compile and run Xyce-ModSpec interface files
+    - cd [ModSpec-SVN]/trunk/ModSpec-C++-API/tests-for-Xyce/
+    - make
+    - LD_LIBRARY_PATH="<TRILINOS_ARCHDIR>/lib:$LD_LIBRARY_PATH" \
+    	./test_nExtvars_nIntvars_jacStamp_MNA ../Res_ModSpec_Element.so
+    - LD_LIBRARY_PATH="<TRILINOS_ARCHDIR>/lib:$LD_LIBRARY_PATH" \
+    	./test_parameter_register_get ../Res_ModSpec_Element.so

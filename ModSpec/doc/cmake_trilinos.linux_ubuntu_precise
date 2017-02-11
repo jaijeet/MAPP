@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#TPLDIR=/Net/Proj/Xyce/XTF/Xyce_Testing/TPL
+SRCDIR=../trilinos-10.10.3-Source
+ARCHDIR=/home/jr/local/pkgs/trilinos-10.10.3_x86_64_precise
+
+
+FLAGS="-O3 -fPIC" \
+\
+cmake \
+\
+-G "Unix Makefiles" \
+\
+-DCMAKE_C_COMPILER=gcc \
+-DCMAKE_CXX_COMPILER=g++ \
+-DCMAKE_Fortran_COMPILER=gfortran \
+\
+-DCMAKE_CXX_FLAGS="$FLAGS" \
+-DCMAKE_CC_FLAGS="$FLAGS" \
+-DCMAKE_FC_FLAGS="$FLAGS" \
+-DCMAKE_INSTALL_PREFIX=$ARCHDIR \
+-DCMAKE_MAKE_PROGRAM="make" \
+-DBUILD_SHARED_LIBS:BOOL=ON \
+\
+-DTrilinos_ENABLE_NOX=ON \
+-DTrilinos_ENABLE_LOCA=ON \
+-DTrilinos_ENABLE_EpetraExt=ON \
+-DEpetraExt_BUILD_BTF=ON \
+-DEpetraExt_BUILD_EXPERIMENTAL=ON \
+-DEpetraExt_BUILD_GRAPH_REORDERINGS=ON \
+-DTrilinos_ENABLE_TrilinosCouplings=ON \
+-DTrilinos_ENABLE_Ifpack=ON \
+-DTrilinos_ENABLE_Isorropia=ON \
+-DTrilinos_ENABLE_AztecOO=ON \
+-DTrilinos_ENABLE_Belos=ON \
+-DTrilinos_ENABLE_Teuchos=ON \
+-DTrilinos_ENABLE_Amesos=ON \
+-DAmesos_ENABLE_KLU=ON \
+-DAmesos_ENABLE_UMFPACK=ON \
+-DTrilinos_ENABLE_Sacado=ON \
+-DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF \
+\
+-DTPL_ENABLE_AMD=ON \
+-DAMD_LIBRARY_DIRS="/usr/lib" \
+-DTPL_AMD_INCLUDE_DIRS="/usr/include/suitesparse/" \
+-DTPL_ENABLE_UMFPACK=ON \
+-DUMFPACK_LIBRARY_DIRS="/usr/lib" \
+-DTPL_UMFPACK_INCLUDE_DIRS="/usr/include/suitesparse/" \
+-DTPL_ENABLE_BLAS=ON \
+-DTPL_ENABLE_LAPACK=ON \
+$SRCDIR
+
+
+exit $?
+

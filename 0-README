@@ -1,0 +1,119 @@
+This is MAPP, the Berkeley Model and Algorithm Prototyping Platform. 
+
+It includes VAPP (the Berkeley Verilog-A Parser and Processor) organized as a
+git subtree under the directory VAPP. VAPP has its own README file:
+VAPP/00-README. Please read that too if you want to use VAPP.
+
+Quickstart
+-------------------------------------------------------------------------------
+
+Note: This "source release" of MAPP (which you have probably obtained via git
+clone) relies on a UNIX/linux toolchain (it needs, eg, autoconf, make,
+/bin/bash, a file system that supports soft links, ln -s, etc.).  If you are
+on a non-linux system, the build system probably won't work unless you spend
+some time tweaking it for your own OS (we cannot do this; please don't ask!).
+If you cannot use linux or a compatible UNIX-based OS with all the required
+utilities, you should probably download and use the pre-packaged MAPP tarball
+available from the release site http://MAPP.eecs.berkeley.edu, not this
+"source release" from git.
+
+0. Your having been provided access to MAPP means that you have agreed to
+   abide by the terms of MAPP's license, as laid out in the file 00-LICENSE
+   in this directory. In short, MAPP is released under the GPL-v3, while VAPP
+   is under the LGPL-v3, unless you have a customized license. The 00-LICENSE
+   file contains additional important details; if you have not read it, please
+   do so. VAPP has its own 00-LICENSE file VAPP/00-LICENSE.
+
+1. OPTIONAL: the A2oDAEAPI and A3oDAEAPI submodules of MAPP contain additional
+   analyses (see Setup/installation for more information). A2oDAEAPI and 
+   A3oDAEAPI are git repositories in their own right, separate from MAPP. You
+   need to have git to the A2oDAEAPI and A3oDAEAPI repositories. If you do
+   have such access, please set them up as submodules of MAPP, as follows:
+    # in the top-level MAPP directory, ie, where this 0-README file is located
+    git submodule add git@hagrid:A2oDAEAPI.git Analyses2-on-DAEAPI
+    git submodule add git@hagrid:A3oDAEAPI.git Analyses3-on-DAEAPI
+
+2. Setup/installation:
+
+    $ autoconf 
+
+    $ ./configure
+      # note: the standard arguments --prefix and --exec-prefix
+      #       are not used by MAPP at this point.
+      #
+      # The useful optional arguments to configure are:
+      # --with-usercontribs # pull in user contributions to MAPP 
+      #                     # (from the contribs/ directory)
+      # --with-A2oDAEAPI # enable support for additional algorithms
+      #                  # if you have access to the Analyses2-on-DAEAPI
+      #                  # submodule (you probably do not, by default).
+      #                  # If you do, this option provides access to stationary
+      #                  # LTI noise, parameter sensitivity analysis, harmonic
+      #                  # balance, shooting, PPV, etc. algorithms.
+      # --with-A3oDAEAPI # enable support for additional algorithms
+      #                  # if you have access to the Analyses3-on-DAEAPI
+      #                  # submodule (you probably do not, by default).
+      #                  # If you do, this option provides access to
+      #                  # Krylov-subspace based LTI model reduction
+      #                  # algorithms.
+      # --with-VVimplementation=<vvimpl> # vvimpl = vv1 | vv2
+      #                  # VVimplementation selects the implementation of
+      #                  # automatic differentiation. Once you start MAPP,
+      #                  # help MAPPautodiff for more information about MAPP's
+      #                  # automatic differentiation capabilities.
+      #                  # The default is vv2. Don't change it unless you 
+      #                  # know what you are doing.
+      # --with-VAPP      # pull in VAPP (Verilog-A Parser and Processor)
+      #                  # VAPP is not enabled by default.
+
+    $ make # this will also "install"
+    
+    The above will create a local installation under ./MAPP-$version/,
+    soft linked to ./MAPP-locallinks-installation for convenience. This
+    "installation" merely sets up soft links to files in your git working
+    copy, so edits to these change the original files. This is convenient for
+    code development.
+    
+    Follow the instructions printed out by make above to ensure that MAPP is
+    set up whenever you start MATLAB.
+
+    It is best to make clean before make, since the "installation"
+    is non-standard (makes soft links instead of compiling or copying).
+
+    Some useful make targets are:
+
+    $ make releasesnapshot # creates a tarball of your installation
+                           # under /var/tmp/, suitable for sending
+                           # others as a snapshot of the installation.
+
+    $ make clean           # removes the installation
+
+    $ make autoclean       # removes the Makefile.
+
+3. Testing the installation:
+
+    - Copy or soft link the file start_MAPP.m to ~/Documents/MATLAB/ (or some
+      other directory in MATLAB's default path).
+
+    - Start MATLAB. Within MATLAB, give the commands:
+      > start_MAPP 
+      > MAPPtest
+    or
+      > MAPPtest('showresults') % to see outputs/plots
+
+4. To clean up the installation (eg, prior to commit/push):
+
+    $ make clean
+    $ make autoclean
+
+5. Step 3 above does not test A2oDAEAPI or A3oDAEAPI functionalities. Running
+   run_ALL_A2oDAEAPI_tests and run_ALL_A3oDAEAPI_tests will illustrate and
+   test some of this functionality. Warning: these can take a long time to
+   run.
+
+6. To use/test VAPP (assuming you configured with --with-VAPP), after step 3 
+   above, give the commands:
+      > start_VAPP 
+      > help VAPP
+
+   See VAPP/00-README for more information about VAPP.

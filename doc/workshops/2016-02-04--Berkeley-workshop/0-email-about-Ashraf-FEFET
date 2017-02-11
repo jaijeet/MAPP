@@ -1,0 +1,53 @@
+Mark,
+
+We're running into some trouble with Ashraf's FEFET model on nanohub.
+
+Recall that part of our agenda was to use this model to illustrate negative
+capacitance modelling (and characteristic curves with folding regions) in a
+device that is currently of general interest in the community.
+
+Here are the problems we have found with Ashraf's FEFET model:
+
+1. As it stands, it contains undeclared variables. (For which reason, Spectre
+   (Cadence's simulator) as well as VAPP (our Verilog-A to ModSpec
+   translator), will not even accept the model.)
+
+2. After fixing the undeclared statements and translating to ModSpec using
+   VAPP, we found that it generally works. However, today, we found what we
+   think is a serious problem with the model - when connected as a diode
+   connected transistor, the model does not converge at zero bias. This
+   happens both in MAPP and in Spectre, using different convergence
+   algorithms. For example, all voltages/currents being zero is NOT a solution.
+   In MAPP, we can loosen convergence tolerances and get it to converge, but
+   it produces a non-zero current at zero bias, which is completely
+   non-physical.
+
+Tianshi and Gokcen spent some time looking into the model and found two things
+seem that seem related to the problem: the thermionic emission current code
+(just a few lines, added by mwahab, Ashraf's student); and the lack of
+smoothness in drain-source inversion code of the MVS model. It is not clear to
+us if the thermonic emission drain current (which is non-zero at zero bias) is
+physical - if so, it would imply energy generation by the device. Removing the
+thermionic emission current code fixes the problem. But even if it is not
+removed, smoothing the drain-source inversion code also fixes the convergence
+problem, though it seems to produce multiple solutions at zero bias, one of
+which is not zero - that doesn't seem physical either.
+
+In my opinion, this model should be revoked from nanoHUB until these issues are
+satisfactorily addressed by the model's publishers and explained clearly in
+the documentation.
+
+Given this, what do we do now for the workshop? I was thinking: 
+
+1. Let Ashraf and his student know about this privately and encourage them to
+   look into it. But we would like not to spend any time hand-holding them
+   beyond pointing out our findings so far, so I'd appreciate any thoughts you
+   might have about how best to do it.
+
+2. The model does seem to work in simulation if it is not diode connected, so
+   we were thinking of illustrating the process of Verilog-A model development
+   and characterization using it, still.
+
+Do let us know what you think. Thanks,
+
+Jaijeet

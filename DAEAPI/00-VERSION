@@ -1,0 +1,147 @@
+DAEAPI-v6.2+delta--DAEAPI-SVN-r31-jr
+
+-- Changelog
+
+%%%%%%%%%%%%%%%%  Begin DAEAPI changelog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%TODO: scaling of variables support (at least a skeleton of this should be
+%      there: classes of variables for manual scaling, which variables
+%      scaled by how much, various support functions, turning off scaling)
+%      - the same for the equations
+%
+%DONE: bring ModSpec up to speed and use ModSpec description of device models.
+%      - MNA_EqnEngine does this
+%
+%TODO: make it q(x,u) when f_takes_inputs (rename it fq_take_inputs)
+%	- need to update LMS, ltiDAE, ltiSSS
+%	- no need for dutransient for LMS - the integration method will
+%		differentiate u(t) implicitly
+%
+% daeAPIv6.2+delta: ongoing changes from v6.2
+%	- TODO: modify DAEAPI/Analyses to support [out, success] = f/q/dfdx/dqdx
+%	- TODO: add DAE.TRANinitcond
+%	- TODO: add proper parameter variability support (using vecvalder, possibly)
+%	- TOFIX: 2012/05/25: Octave support broken because NR gJ update uses nargout(funcname),
+%		which is not supported properly yet in Octave
+%	- MAJOR UPDATE TODO: generalize DAEAPI and all analyses that use q() to support
+%		Jq(x,u)*d/dt[x(t)] + d/dt[q(x,u)]
+%		- this is needed for LTV adjoints and for generality (eg, to support capacitance-based models)
+%		- see notes in [xournal-notes]/2012-05-26-Note-11-13--LTVDAEwAdjointAndTimeFlippingCapability.xoj
+%	- MAJOR UPDATE TODO: move DAEAPI to a single call fqJfxuJqx for calculating all DAE functions
+%		f, df_dx, df_du, q, dq_dx. This is for efficiency, especially for larger semiconductor models.
+%		- all algorithms need updates to use fqJfxuJqx if available. (f/q/df_dx/df_du/dq_dx will be
+%		  retained as separate function calls, but implemented via fqJfxuJqx).
+%		- MNAeqnEngine and RREeqnEngine will need updates to provide this. MNAeqnEngine will need
+%		  ModSpec updates (see ModSpec TODOs) to support this.
+%	- TODO: put in diagonal scaling of unknowns and equations within NR convergence criteria
+%		- important for oscillator HB
+%	- TODO: Mammalian circadian, SCN models; AVN model, etc.
+%	- TODO: figure out why MNA_EqnEngine and MNA_EqnEngine_older are behaving differently on DAAV6
+%		test_DAAV6_updown_asymm_ringosc_transient_HB_PPV.m -- see comments at the end of DAAV6_updown_asymm_ringosc.m.
+%		Could HB flakiness be due to the use of A\b for minimum-norm solution?
+%	- TODO: autoconf/configure should take arguments for the locations of ModSpec, vecvalder and the NetlistParser and set up
+%		setuppaths_DAEAPI accordingly.
+%	- 2012/10/09: renamed utils/setuppaths to setuppaths_DAEAPI and test-scripts/run_ALL to run_ALL_DAEAPI_tests.
+%	- [2012/10/09: Split DAEAPI away from analyses - started new SVN repository]
+%	- Changed MNA_EqnEngine to set up and use incidence matrices for f/q - and using them to find dfq_dxu of the individual
+%		devices, without relying on vecvalder to differentiate the circuit equations as a whole. 
+%		Tested on DAAV6*, BSIM3_ringosc, resistive divider, vsrc-RC, vsrc-RLC, vsrc-diode; all except 
+%		test_DAAV6_updown_asymm_ringosc_transient_HB_PPV.m seem to work.
+%	- DAEAPI_skeleton_core updated with new data field time_units; used in all relevant analyses for plot labels.
+%	- 2012/06/15: Goldbeter-2005 Drosophila and Zhang-et-al-2000 SAN osc models added.
+%	- BrusselatorOsc added.
+%	- set_u* now support setting of individual inputs
+%	  - as part of this, DAE skeleton clean-up: DAE_input_add_ons.m added and included in DAE_common_skeleton.
+%	- all DAEs redone to pull in the DAEAPI_skeleton base class, which now has uHB and set_uHB defined. 
+%	  DAE definitions can inherit common function/data definitions from DAEAPI_skeleton and focus on
+%	  defining the meaningful additions only.
+%	- added MNA_EqnEngine and several related tests
+%	- currently INCOMPLETE: started making a proper Sedra/Smith based SH model using charges, attempting
+%		to make the charges at least continuous (device-models/coreBetterSH.m)
+%	- added utils/d?_d?_auto.m for vecvalder-based automatic differentiation
+%	  - d?_dp_auto not complete yet
+%	- added rename{Unks,Eqns,Parms} support
+%	- added preliminary connectCktsAtNodes support
+%	- added uniqID function support to DAEAPI
+%
+% daeAPIv6.2: changes from v6.1
+%	- moved getparms, setparms, {,set_}u{QSS,LTISSS,transient} out of DAE files into separate files in utils/
+%	- added noise support (direct/adjoint LTInoise working on RCline; updated noise fn template for other DAEs)
+%	- added simple NR-based timestep control to LMS.
+%	- added df_du(...) when DAE.f_takes_inputs == 1
+%
+% daeAPIv6.1: changes from v6
+%	- NR limiting support added: NRlimiting(...) [moved to Analyses from DAEAPI]
+%	- QSSinitGuess(DAE) updated to QSSinitGuess(u, DAE)
+%	- setparms() and getparms() improved to take parameter names/vals as args
+%	- B(x, DAE), C(x, DAE) and D(x, DAE) reverted to  B(DAE), C(DAE) and D(DAE)
+%		- because we don't have tensor support yet; and we need tensor
+%		  support for d/dx B(x) - which we need for df_dx
+%
+% daeAPIv6: changes from v5
+% - support for qdot(x) + f(x,B*u(t)) = 0 (ie, b(t) included in f)
+%	- by setting the flag DAE.f_takes_inputs
+%	- f(x) is replaced by f(x, b), with b=B*utransient(t) implemented in LMS.m
+%	- similarly, df_dx(x) is replaced by df_dx(x, b) 
+%
+%
+% daeAPIv5: changes from v4
+% - input and output support (for MOR)
+%   - the DAE I/O system now is:
+% 	qdot(x,parms) + f(x,parms) + B(x,parms)*u(t) + M(x,parms)*n(t,parms) = 0
+%	system outputs y: y(t) = C(x,parms)^T x(t) + D(x,parms) u(t)
+%     - but (because we need tensors), no support yet for x, parms dependences
+%	of B, C, D.
+%   - new functions:
+%	- B = DAE.B(DAE); no support yet for DAE.B(x,DAE)
+%	- dBdx = DAE.dB_dx(x,DAE) - no support yet
+%	- dBdp = DAE.dB_dp(x,DAE) - no support yet
+%	- C = DAE.C(DAE); no support yet for DAE.C(x,DAE)
+%	- dCdx = DAE.dC_dx(x,DAE) - no support yet
+%	- dCdp = DAE.dC_dp(x,DAE) - no support yet
+%	- D = DAE.D(DAE); no support yet for DAE.D(x,DAE)
+%	- dDdx = DAE.dD_dx(x,DAE) - no support yet
+%	- dDdp = DAE.dD_dp(x,DAE) - no support yet
+%	- p = DAE.ninputs(DAE)
+%	- q = DAE.noutputs(DAE)
+%	- DAE = DAE.set_utransient(utfunc, utargs, DAE);
+%		- utfunc(t, utargs)
+%	- DAE = DAE.set_uQSS(uval, DAE);
+%	- DAE = DAE.set_uLTISSS(Uffunc, Ufargs, DAE);
+%		- Uffunc(f, Ufargs)
+%	- out = DAE.utransient(t, DAE) % must vectorized wrt t
+%	- out = DAE.uQSS(DAE)
+%	- out = DAE.uLTISSS(f, DAE) % must vectorized wrt f
+%	- out = DAE.inputnames(DAE)
+%	- out = DAE.outputnames(DAE)
+%   - changed:
+%	- DAE.QSSinitGuess: argument btQSS removed
+%	- separate object Outputs is now called StateOutputs
+%	- need to update QSS, LTISSS, etc. to do something sensible with
+%	  system outputs y
+%   - removed:
+%	- b, bQSS, bLTISSS, dbtransient_dp, dbQSS_dp have been removed. All 
+%		analyses need to be updated accordingly
+% %%%%%%
+%
+% daeAPIv4: changes from daeAPIv3: 
+% - argument parms is no longer used for f, q, b and related functions.
+%	it is picked up from within DAE.
+% - support for specialized b(t) inputs for different analyses
+%   - QSS; transient; LTISSS; noise
+% - NR init guess support
+% - support for parameter variability
+%   - makes use of Parameters object
+%   - now has setparms/getparms functions
+% - support for noise analysis
+% - other small cleanups (eg, ensuring df/dq return sparse matrices).
+% 
+%%%%%%%%%%%%%%%% end DAEAPI changelog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Type "help MAPPlicense" at the MATLAB/Octave prompt to see the license      %
+%% for this software.                                                          %
+%% Copyright (C) 2008-2013 Jaijeet Roychowdhury <jr@berkeley.edu>. All rights  %
+%% reserved.                                                                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+

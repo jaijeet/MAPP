@@ -1,0 +1,58 @@
+`include "disciplines.vams"
+`include "constants.vams"
+module RRAM_v0(t, b);
+    inout t, b;
+    electrical t, b, nGap;
+    parameter real g0 = 0.25 from (0:inf);
+    parameter real V0 = 0.25 from (0:inf);
+    parameter real Vel0 = 10 from (0:inf);
+    parameter real I0 = 1e-3 from (0:inf);
+    parameter real Beta = 0.8 from (0:inf);
+    parameter real gamma0 = 16 from (0:inf);
+    parameter real Ea = 0.6 from (0:inf);
+    parameter real a0 = 0.25 from (0:inf);
+    parameter real tox = 12 from (0:inf);
+
+    parameter real maxGap = 1.7 from (0:inf);
+    parameter real minGap = 0.2 from (0:inf);
+
+    parameter real smoothing = 1e-8 from (0:inf);
+    parameter real GMIN = 1e-12 from (0:inf);
+    parameter real Kclip = 50 from (0:inf);
+
+    real Gap, ddt_gap, Gamma, Fw1, Fw2, clip_0, clip_maxGap;
+
+    analog function real smoothstep;
+        input x, smoothing;
+        real  x, smoothing;
+        begin
+            smoothstep = 0.5*(x/sqrt(x*x + smoothing)+1);
+        end
+    endfunction // smoothstep
+
+    // analog function real limsinh;
+    //     input x;
+    //     real  x;
+    //     begin
+    //         limsinh = 0.5*(limexp(x) + limexp(-x));
+    //     end
+    // endfunction //limsinh 
+
+    analog begin
+        Gap = V(nGap, b); 
+        // I(t, b) <+ I0 * limexp(-Gap/g0) * limsinh(V(t, b)/V0) + GMIN*V(t, b); 
+        I(t, b) <+ I0 * limexp(-Gap/g0) * sinh(V(t, b)/V0) + GMIN*V(t, b); 
+    
+        Gamma = gamma0 - Beta * pow(Gap, 3); 
+        // ddt_gap = -Vel0*exp(-Ea/$vt)*limsinh(V(t, b)*Gamma*a0/tox/$vt);
+        ddt_gap = -Vel0*exp(-Ea/$vt)*sinh(V(t, b)*Gamma*a0/tox/$vt);
+
+        Fw1 = smoothstep(-Gap, smoothing);
+        Fw2 = smoothstep(Gap-maxGap, smoothing);
+        clip_0 = (limexp(Kclip*(-Gap)) - ddt_gap) * Fw1;
+        clip_maxGap = (-limexp(Kclip*(Gap-maxGap)) - ddt_gap) * Fw2;
+
+        I(nGap, b) <+ ddt_gap + clip_maxGap + clip_0;
+        I(nGap, b) <+ ddt(-1e-9*Gap);
+    end 
+endmodule

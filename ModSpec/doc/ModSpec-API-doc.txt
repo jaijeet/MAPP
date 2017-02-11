@@ -1,0 +1,200 @@
+2012/11/06: The most up-to-date documentation for ModSpec-MATLAB-API is within the comments
+of ../ModSpec-MATLAB-API/ModSpec_skeleton_core.m
+
+There is currently no documentation for ModSpec-C++-API.
+
+The most up-to-date documentation for the Xyce-ModSpec interface is in 
+./Xyce_ModSpec_Interface_doc.txt.
+
+
+2012/11/06: The stuff below is extremely out of date - basically obsolete.
+----------------------------------------------------------------------------------------------------
+Notes for Xyce:
+
+- how do we do vectors of mixed types (eg, output of getparms, input of setparms) conveniently?
+  - does Xyce already have a mechanism for this?
+- we need to find and use the device's f and q stamps in the Instance constructor
+- just like they have a y element, can we have modspec element (z element?)?
+
+----------------------------------------
+- The most up-to-date docs are in the comments of ModSpec_skeleton_core.m. The following
+  needs to be updated.
+  - should also provide usage examples - see, eg, [DAEAPI]/BSIM3_ringosc.m
+- instantiating a device element:
+	MATLAB:
+		example: MOD = resModSpec('r1');
+	C++:
+		ModSpec_Element* MOD; // ModSpec_Element is a virtual class definition, from which
+				      // specific device models are derived - eg, res_ModSpec_Element
+		MOD = resModSpec("r1");
+
+% low-level ModSpec API functions
+parmnames:
+	MATLAB:
+		function out = parmnames(MOD)
+		% out is a cell array of parameter names 
+
+	C++:
+		vector<string> out;
+		out = MOD->parmnames();
+		
+
+parmtypes:
+	parameter types can be: 'int', 'double', 'boolean', 'string'
+	MATLAB:
+		function out = parmtypes(MOD)
+		% out is a cell array of parameter types
+
+	C++:
+		vector<String> out;
+		out = MOD->parmtypes();
+		
+getparms:
+	MATLAB:
+		% call as: parmvals = getparms(MOD)
+		%   - returns values of all defined parameters
+		% OR as parmval = getparms(parmname, MOD)
+		%         ^                   ^         
+		%       value               string
+		% OR as parmvals = getparms(pnames, MOD)
+		%         ^                     ^ 
+		%    cell array            cell array
+
+	C++:
+
+setparms:
+	MATLAB:
+		% call as: outMOD = setparms(allparmvals, MOD)
+		%                              ^     
+		%              cell array with values of all defined parameters
+		% OR as outMOD = setparms(parmname, newval, MOD)
+		%                            ^         ^
+		%                          string    value
+		% OR as outMOD = setparms(pnames, newvals, MOD)
+		%                            ^         ^
+		%                            cell arrays
+
+	C++:
+
+
+
+parmdefaults:
+	MATLAB:
+		function out = parmdefaults(MOD)
+		% out is a cell array of default parameter names 
+
+	C++:
+
+NIL.NodeNames:
+	MATLAB:
+		function out = NodeNames(MOD)
+		% out is a cell array of device-internal node names. These
+		% define, eg, the order of the SPICE netlist nodes for the device.
+
+	C++:
+
+NIL.RefNodeName:
+	MATLAB:
+		function out = RefNodeName(MOD)
+		% out (a string) defines which node (from NodeNames) is the device's
+		% internal reference node.
+
+	C++:
+
+IOnames:
+	MATLAB:
+		function out = IOnames(MOD)
+		% a cell array with strings containing the names of the devices's IOs
+		% for EE NILs, these are branch voltages and currents derived from NodeNames
+		% and RefNodeName
+
+	C++:
+
+NIL.IOtypes:
+	MATLAB:
+		function out = IOtypes(MOD)
+		% a cell array that defines (for EE elements) the type of each IO (from IOnames):
+		% either 'v' or 'i'
+		
+	C++:
+
+NIL.IOnodeNames:
+	MATLAB:
+		function out = IOnodeNames(MOD)
+		% a cell array that defines (for EE elements) the node to which each IO (from IOnames),
+		% which is a branch voltage or current, corresponds. Eg, if the IO is 'vpn' or 'ipn',  and the
+		% reference node is 'n', then its IOnodeName is 'p'
+
+	C++:
+
+ExplicitOutputNames:
+	% this defines the order of the vector vecZ.
+	MATLAB:
+		function out = ExplicitOutputNames(MOD)
+		% cell array containing the names of IOs (from IOnames)
+		% that are explicit outputs
+
+	C++:
+
+OtherIONames:
+	% this defines the order of the vector vecX.
+	MATLAB:
+		function out = otherIONames(MOD)
+		% cell array containing the names of IOs (from IOnames)
+		% that are NOT explicit outputs
+
+	C++:
+
+InternalUnkNames:
+	% this defines the order of the vector vecY.
+	MATLAB:
+		function out = InternalUnkNames(MOD)
+		% cell array containing the names of unknowns
+		% internal to the device (ie, not one of the IOs).
+
+	C++:
+
+ImplicitEquationNames:
+	% this defines the order of the vector vecW.
+	MATLAB:
+		function out = ImplicitEquationNames(MOD)
+		% cell array containing the names of all equations
+		% that are not for the explicit outputs.
+
+	C++:
+
+Unames:
+	% this defines the order of the vector vecU (or u, as it is temporarily called).
+	MATLAB:
+		function out = Unames(MOD)
+		% cell array containing the names of all equations
+		% that are not for the explicit outputs.
+
+	C++:
+
+fe:
+	MATLAB:
+		function vecZf = fe(vecX, vecY, vecU, MOD)
+		% evaluates the f component of all the explicit outputs
+	
+	C++:
+			
+qe: 
+	MATLAB:
+		function vecZq = qe(vecX, vecY, MOD)
+		% evaluates the q component of all the explicit outputs
+	
+
+fi:
+	MATLAB:
+		function vecWf = fi(vecX, vecY, vecU, MOD)
+		% evaluates the f component of all the implicit equations
+	
+	C++:
+			
+qi: 
+	MATLAB:
+		function vecWq = qi(vecX, vecY, MOD)
+		% evaluates the q component of all the implicit equations
+	
+% 

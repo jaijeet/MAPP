@@ -1,0 +1,255 @@
+function MOD = {{ BASENAME }}(uniqID)
+
+    if nargin < 1
+        MOD.uniqID = '';
+    else
+        MOD.uniqID = uniqID;
+    end
+
+    MOD.model_name = {{ pyMOD.model_name | as_string }};
+    MOD.model_description = {{ pyMOD.model_description | as_string }};
+
+    MOD.NIL.node_names = {{ pyMOD.terminals | as_cell_array(separate_lines_threshold=None) }};
+    MOD.NIL.refnode_name = {{ pyMOD.refnode | as_string }};
+    MOD.internal_unk_names = {{ pyMOD.internal_unks | as_cell_array(separate_lines_threshold=None) }};
+    MOD.explicit_output_names = {{ pyMOD.explicit_outs | as_cell_array(separate_lines_threshold=None) }};
+    MOD.implicit_equation_names = {{ pyMOD.implicit_eqns | as_cell_array(separate_lines_threshold=None) }};
+    MOD.u_names = {{ pyMOD.internal_srcs | as_cell_array(separate_lines_threshold=None) }};
+
+    MOD.output_names = {{ pyMOD.output_names | as_cell_array(separate_lines_threshold=None) }};
+    MOD.output_matrix = {{ pyMOD.output_matrix | as_matrix | indent(8) }};
+    
+    MOD.parm_names = {{ pyMOD.parm_names | as_cell_array(separate_lines_threshold=5) | indent(8) }};
+    MOD.parm_defaultvals = {{ pyMOD.parm_default_values | as_cell_array(separate_lines_threshold=5) | indent(8) }};
+    MOD.parm_vals = MOD.parm_defaultvals;
+
+    MOD.support_initlimiting = {{ 1 if pyMOD.support_initlimiting == True else 0 }};
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.limited_var_names = {{ pyMOD.limited_vars | as_cell_array(separate_lines_threshold=None) }};
+    MOD.vecXY_to_limitedvars_matrix = {{ pyMOD.vecXY_to_limited_vars_matrix | as_matrix | indent(8) }};
+    {%- endif %}
+
+    MOD.name = @(inMOD)(inMOD.uniqID);
+    MOD.ModelName = @(inMOD)(inMOD.model_name);
+    MOD.description = @(inMOD)(inMOD.model_description);
+    MOD.InternalUnkNames = @(inMOD)(inMOD.internal_unk_names);
+    MOD.ExplicitOutputNames = @(inMOD)(inMOD.explicit_output_names);
+    MOD.ImplicitEquationNames = @(inMOD)(inMOD.implicit_equation_names);
+    MOD.uNames = @(inMOD)(inMOD.u_names);
+    MOD.IOnames = @(inMOD)(inMOD.IO_names);
+    MOD.OtherIONames = @(inMOD)(inMOD.OtherIO_names);
+    MOD.NIL.NodeNames = @(inMOD)(inMOD.NIL.node_names);
+    MOD.NIL.RefNodeName = @(inMOD)(inMOD.NIL.refnode_name);
+    MOD.NIL.IOnodeNames = @(inMOD)(inMOD.NIL.io_nodenames);
+    MOD.NIL.IOtypes = @(inMOD)(inMOD.NIL.io_types);
+    MOD.OutputNames = @(inMOD)(inMOD.output_names);
+    MOD.OutputMatrix = @OutputMatrix_ModSpec;
+    MOD.nparms = @(inMOD)(length(inMOD.parm_names));
+    MOD.parmnames = @(inMOD)(inMOD.parm_names);
+    MOD.parmdefaults = @(inMOD)(inMOD.parm_defaultvals);
+    MOD.getparms = @getparms_ModSpec;
+    MOD.setparms = @setparms_ModSpec;
+    MOD.getparmtypes = @getparmtypes_ModSpec;
+    MOD.nparams = @(inMOD)(length(inMOD.parm_names));
+    MOD.paramnames = @(inMOD)(inMOD.parm_names);
+    MOD.paramdefaults = @(inMOD)(inMOD.parm_defaultvals);
+    MOD.getparams = @getparms_ModSpec;
+    MOD.setparams = @setparms_ModSpec;
+    MOD.getparamtypes = @getparmtypes_ModSpec;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.LimitedVarNames = @(inMOD)(inMOD.limited_var_names);
+    MOD.vecXYtoLimitedVarsMatrix = @vecXYtoLimitedVarsMatrix_ModSpec;
+    MOD.vecXYtoLimitedVars = @vecXYtoLimitedVars_ModSpec;
+    {%- endif %}
+
+    MOD = setup_IOnames_OtherIOnames_IOtypes_IOnodenames(MOD);
+
+    MOD.fe = @fe_from_fqeiJ_ModSpec;
+    MOD.qe = @qe_from_fqeiJ_ModSpec;
+    MOD.fi = @fi_from_fqeiJ_ModSpec;
+    MOD.qi = @qi_from_fqeiJ_ModSpec;
+    MOD.fqei = @fqei_from_fqeiJ_ModSpec;
+    MOD.fqeiJ = @fqeiJ;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.initGuess = @initGuess;
+    MOD.limiting = @limiting;
+    {%- endif %}
+
+    MOD.dfe_dvecX = @dfe_dvecX_from_fqeiJ_ModSpec;
+    MOD.dfe_dvecY = @dfe_dvecY_from_fqeiJ_ModSpec;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.dfe_dvecLim = @dfe_dvecLim_from_fqeiJ_ModSpec;
+    {%- endif %}
+    MOD.dfe_dvecU = @dfe_dvecU_from_fqeiJ_ModSpec;
+
+    MOD.dqe_dvecX = @dqe_dvecX_from_fqeiJ_ModSpec;
+    MOD.dqe_dvecY = @dqe_dvecY_from_fqeiJ_ModSpec;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.dqe_dvecLim = @dqe_dvecLim_from_fqeiJ_ModSpec;
+    {%- endif %}
+
+    MOD.dfi_dvecX = @dfi_dvecX_from_fqeiJ_ModSpec;
+    MOD.dfi_dvecY = @dfi_dvecY_from_fqeiJ_ModSpec;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.dfi_dvecLim = @dfi_dvecLim_from_fqeiJ_ModSpec;
+    {%- endif %}
+    MOD.dfi_dvecU = @dfi_dvecU_from_fqeiJ_ModSpec;
+
+    MOD.dqi_dvecX = @dqi_dvecX_from_fqeiJ_ModSpec;
+    MOD.dqi_dvecY = @dqi_dvecY_from_fqeiJ_ModSpec;
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.dqi_dvecLim = @dqi_dvecLim_from_fqeiJ_ModSpec;
+    {%- endif %}
+
+    {%- if pyMOD.support_initlimiting == True %}
+    MOD.dinitGuess_dvecU = @dinitGuess_dvecU;
+    MOD.dlimiting_dvecX = @dlimiting_dvecX;
+    MOD.dlimiting_dvecY = @dlimiting_dvecY;
+    {%- endif %}
+
+end
+
+{% if pyMOD.support_initlimiting == True %}
+function [fqei_out, J_out] = fqeiJ(vecX, vecY, vecLim, vecU, flag, MOD)
+
+    if nargin < 6
+
+        MOD = flag;
+        flag = vecU;
+        vecU = vecLim;
+
+    end
+
+    do_fe = (isfield(flag, 'fe') && flag.fe == 1);
+    do_qe = (isfield(flag, 'qe') && flag.qe == 1);
+    do_fi = (isfield(flag, 'fi') && flag.fi == 1);
+    do_qi = (isfield(flag, 'qi') && flag.qi == 1);
+    do_J = (isfield(flag, 'J') && flag.J == 1);
+
+    if nargin < 6
+
+        if (do_fe && ~do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fe_without_limiting | indent(12, True) }}
+
+        elseif (~do_fe && do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qe_without_limiting | indent(12, True) }}
+        
+        elseif (~do_fe && ~do_qe && do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fi_without_limiting | indent(12, True) }}
+
+        elseif (~do_fe && ~do_qe && ~do_fi && do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qi_without_limiting | indent(12, True) }}
+
+        else
+
+{{ pyMOD.MATLAB_code_for_fqeiJ_without_limiting | indent(12, True) }}
+
+        end
+
+    else
+
+        if (do_fe && ~do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fe_with_limiting | indent(12, True) }}
+
+        elseif (~do_fe && do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qe_with_limiting | indent(12, True) }}
+        
+        elseif (~do_fe && ~do_qe && do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fi_with_limiting | indent(12, True) }}
+
+        elseif (~do_fe && ~do_qe && ~do_fi && do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qi_with_limiting | indent(12, True) }}
+
+        else
+
+{{ pyMOD.MATLAB_code_for_fqeiJ_with_limiting | indent(12, True) }}
+
+        end
+
+    end
+
+end
+
+function out = initGuess(vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_init_guess | indent(4, True) }}
+
+end
+
+function out = dinitGuess_dvecU(vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_dinit_guess_dvecU | indent(4, True) }}
+
+end
+
+function out = limiting(vecX, vecY, vecLim, vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_limiting | indent(4, True) }}
+
+end
+
+function out = dlimiting_dvecX(vecX, vecY, vecLim, vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_dlimiting_dvecX | indent(4, True) }}
+
+end
+
+function out = dlimiting_dvecY(vecX, vecY, vecLim, vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_dlimiting_dvecY | indent(4, True) }}
+
+end
+
+function out = dlimiting_dvecLim(vecX, vecY, vecLim, vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_dlimiting_dvecLim | indent(4, True) }}
+
+end
+
+function out = dlimiting_dvecU(vecX, vecY, vecLim, vecU, MOD)
+
+{{ pyMOD.MATLAB_code_for_dlimiting_dvecU | indent(4, True) }}
+
+end
+{% else %}
+function [fqei_out, J_out] = fqeiJ(vecX, vecY, vecU, flag, MOD)
+
+    do_fe = (isfield(flag, 'fe') && flag.fe == 1);
+    do_qe = (isfield(flag, 'qe') && flag.qe == 1);
+    do_fi = (isfield(flag, 'fi') && flag.fi == 1);
+    do_qi = (isfield(flag, 'qi') && flag.qi == 1);
+    do_J = (isfield(flag, 'J') && flag.J == 1);
+
+    if (do_fe && ~do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fe_without_limiting | indent(8, True) }}
+
+    elseif (~do_fe && do_qe && ~do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qe_without_limiting | indent(8, True) }}
+    
+    elseif (~do_fe && ~do_qe && do_fi && ~do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_fi_without_limiting | indent(8, True) }}
+
+    elseif (~do_fe && ~do_qe && ~do_fi && do_qi && ~do_J)
+
+{{ pyMOD.MATLAB_code_for_only_qi_without_limiting | indent(8, True) }}
+
+    else
+
+{{ pyMOD.MATLAB_code_for_fqeiJ_without_limiting | indent(8, True) }}
+
+    end
+
+end
+{%- endif %}
+

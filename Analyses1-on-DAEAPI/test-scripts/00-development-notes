@@ -1,0 +1,404 @@
+2014/08/02 by Tianshi:
+----------------------
+Updates to test system:
+
+1. 'external' test support in MAPPtest:
+	MAPPtest now accepts another type of tests apart from AC/DC/TRAN, which
+    contains fields: name, analysis = 'external', scriptname
+
+      e.g.
+              name: 'ALL_ModSpec_tests'
+          analysis: 'external'
+        scriptname: 'MAPPtest_ALL_ModSpec_tests'
+
+      where MAPPtest_ALL_ModSpec_tests must
+            1. return [success, summary] just like MAPPtest_AC/DC/TRAN
+            2. take care of its only refdata if needed
+			3. minimize/eliminate the printout (use eval() to suppress output
+               for example) and pipe its printout to summary
+            4. terminate without error (again, use eval() internally)
+      Note that MAPPtest_ALL_ModSpec_tests is not the original
+      run_ALL_ModSpec_tests, but calls the original one internally and
+      suppress printouts.
+
+    In this way, ModSpec/vecvalder/DAEAPI tests have been added in MAPPtest, 
+    shooting/HB tests can also be added in temporarily, just checking whether
+    the code terminates successfully.
+
+	It also enables external miscellaneous to be added into MAPPtest. For
+    example, we can implement tests that only test the calling syntax of NR.
+
+2. tags support
+
+TODOs:
+
+1. integrate Analyses2 tests into MAPPtest
+
+2. think more about tags: how do enable more complex interactions of tags?
+   Currently if two tags are specified, allMAPPtests returns the union of tests
+   with these two tags. Alternatively we may want the intersection, or
+   complement. Moreover, we may want to run tests that are "not" MNA, "not" LTE.
+
+   In conclusion, we need more flexible tags support.
+
+
+2014/05/01 by Bichen:
+---------------------
+The goal of this modification is to move all original tests in run_ALL_*_tests into
+the automatic testing system, MAPPtest. It also includes adding proper help
+documents, oranizing the tests into groups (eg, quick, long etc.), setting up a
+sensible cron schedule for running different tests, and so on.
+
+	- Work plan
+	  1. Make a lists of the tests to be moved to MAPPtests.
+	     This includes tests in run_ALL_*_tests, test_MNAEqnEngine_*, LTEtests*,
+		 test_* and etc. Put them into directories to make this directory look
+		 cleaner.
+	  2. Write MAPPtest scripts for tests in the list.
+	  3. Organize MAPPtests into groups, update cron schedules and etc.
+
+	- Summary
+	  1. Now there are in total 82 MAPPtests. Running them on laptop takes about
+	  	 50 min.
+	  2. All the tests are organized in groups by either type (DC/AC/TRAN), 
+		 running time (slow/quick) or specific purpose (MNA/STA/LTE). Details
+		 can be found in the help of allMAPPtests.m.
+	  3. allMAPPtests.m is used as default MAPPtest list and for daily automatic
+		 MAPPtest. For pre-merging check or other ocasions, user can use
+		 allMAPPtests_quick.m to get an efficient list of tests for quick checking.
+	  4. It's not necessary to change the cron schedule.
+---------------------
+
+
+Test automation on A1oDAEAPI: 
+
+
+Initially, the following 5 files will be chosen to be modified:
+
+1. run_BJTdiffpair_DCsweep.m
+2. run_inverter_DCsweep.m
+3. run_inverter_transient.m
+4. run_fullWaveReactifier_AC.m
+5. run_resVsrcDiodeRLC_transient.m
+
+-run them with the default parameters 
+-run them by changing parameters to make the results more accurate (use high
+tolerance, more iterations; for transient, can use smaller time step). If the
+answers do not change much, then in most likelihood the simulation results are
+correct. (need to take help of HSPICE??)
+
+-Once confident about accuracy of the simulation, proceed to implement the
+test automation system. The test automation system will be based on Tianshi's
+ModSpec test automation system. The outline of the algorithm is provided below.
+
+2013, Oct 1st
+-------------
+Previously, reference data of MAPPtest contains external links. eg: The
+entire DAE is saved in ref.DAE, which inlucdes external links and
+function pointers. It's dangerous because if those external files are
+removed, MAPPtest will fail. Only numerical/text data can be saved in
+reference data of MAPPtest.
+
+Current structure of reference data is listed below
+	- MAPPtest_transient.m
+	  ref
+	   |
+	   |-->DAE
+	   |     |
+	   |	 L-->| Nunks
+	   |	     | UnkNames
+	   |	     | Ninputs
+	   |	     | InputNames 
+	   |	     | Nparms 
+	   |	     | ParmNames
+	   |	     | Parms 
+	   |	     L uTrans
+       |
+	   |-->TransObj
+	   |     |
+	   |	 L-->| TRmethod
+	   |	     | tranparms
+	   |	     | tpts
+	   |         L vals
+   	   |
+	   |-->LMSMethod
+	   |-->xinit
+	   |-->tstart 
+	   |-->tstep 
+	   L-->tstop 
+
+	- MAPPtest_DCSweep.m
+	   ref
+       |
+	   |-->DAE
+       |     |
+	   |	 L-->| Nunks
+	   |	     | UnkNames
+	   |	     | Ninputs
+	   |	     | InputNames 
+	   |	     | Nparms 
+	   |	     | ParmNames
+	   |	     L Parms 
+	   |
+	   |-->NRparms
+	   |-->initGuess
+	   |-->QSSInputs
+	   L-->OUTs
+
+	- MAPPtest_AC.m
+ 	   ref
+       |
+	   |-->DAE
+       |     |
+	   |	 L-->| Nunks
+	   |	     | UnkNames
+	   |	     | Ninputs
+	   |	     | InputNames 
+	   |	     | Nparms 
+	   |	     | ParmNames
+	   |	     | Parms 
+	   |         | uQSS
+	   |         L uLTISSS
+	   |-->LTISSSObj
+	   |     L-->freqs
+	   |
+	   |-->sweeptype
+	   |-->initGuess
+	   |-->fstart
+	   |-->tstop
+	   |-->nsteps
+	   |-->mag
+	   L-->ph
+
+
+
+2013, July 5th
+--------------
+1. Basic structure of tests:
+   -- Desired usage (The way use see it) FOR TESTING: The user runs "run_ALL_tests_on_A1oDAE". This script in turn runs 
+
+       -----------------------------------------------------------
+        -- run_ALL_DCsweep_tests_on_A1oDAEAPI('rDAEtest','update')
+       -----------------------------------------------------------
+           Arguments are optional. However, if arguments are present, the
+           following action, takes place.  
+
+           rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+           update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+           The followings are stored in the .mat file for a particular
+           test-script
+
+
+             Save the following variables, if creating the database, else
+             compare the parameters of the test-script with its counterpart in
+             ref data in the database (function compare_parm).
+
+                           NRparms.maxiter
+                           NRparms.reltol
+             NRparms       NRparms.abstol
+                           NRparms.residualtol
+                           NRparms.limiting
+                           NRparms.dbglvl      % DO NOT CARE ABOUT IT
+
+                           The value of NRparms may be default value or might be
+                           set in the test-script.
+
+             initguess     If initial guess provided, then save it. If not, then compare/save the
+                           QSSObj.DAE.QSSinitGuess
+
+             N             # of sweeping steps
+
+             inputs        These values are gathered from DAE.get_uQSS  
+
+              -- If compare_parms() return 0, then abort and ask the user to run
+                 update, so that new database files are created using the new
+                 parms values.
+
+              -- Then run DC sweep (through a loop) and save the StateOutputs in
+                 step of the loop.
+
+                  outs = StateOutput(DAE);  
+
+                   -- If the standard practice of using previous step solution
+                      next step initial conditions is not followed, then during
+                      each step of the rule, save the initial conditions 
+
+              -- Once the simulation is complete, then if (update), save the
+                 "outs"; or (if test), then compare the outputs using function
+                 compare_outputs(). The function compare_outputs should use a
+                 root-mean-square type of criterion to check if the output array
+                 is sufficiently close to ref output array. If not, more
+                 information provided to the user (e.g., at what value of input
+                 the DC sweep failed);
+                 
+           This runs the test-scripts with only DC sweep. Currently, following
+           files need to be included in this.
+
+              (1). run_BJTdiffpair_DCsweep.m
+              (2). run_BJTdiffpairSchmittTrigger_DCsweep.m
+              (3). run_BJTschmittTrigger_DCsweep.m
+              (4). run_fullWaveRectifier_DCsweep.m
+              (5). run_inverterchain_DCsweep.m
+              (6). run_inverter_DCsweep.m
+              (7). run_reducedRRE_DC.m
+              (8). run_reducedRRE_QSS.m
+              (9). run_vsrc_xgate_res_QSS.m
+             (10). test_MNAEqnEngine_DAAV6_char_curves.m
+             (11). test_MNAEqnEngine_MVS_char_curves.m
+             (12). test_MNAEqnEngine_MVS_no_int_nodes_char_curves.m
+
+        --------------------------------------------------------------------------
+        -- run_ALL_trans_tests_on_A1oDAEAPI('rDAEtest','update')
+        --------------------------------------------------------------------------
+
+            Arguments are optional. However, if arguments are present, the
+            following action, takes place. 
+
+            rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+            update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+            The followings are stored in the .mat file for a particular
+            test-script
+
+
+            Params:
+
+
+             Initial Value:                 Check if initial values of existing
+                                            data is same as that being used in
+                                            the transient simulation. If QSS is
+                                            used to determine the intial
+                                            condition, then go to previous
+                                            example (with N=1).
+             tstart, tstop, and tstep
+
+             TRmethods.XXXX                 The second argument of LMS call*
+             
+             LMStransparm                   The third argument of LMS call*
+
+             * This should be the final TransObj before running  simulation.
+               Sometimes, if you are interested in using an LMS method other than
+               Backward Euler, then there may be more than one LMS call. So,
+               this should be the final LMS call.
+
+             # Also, add text saying what happens if any of the usability helper
+               functions (e.g., run_transient_GEAR2) are called. Ans: Nothing much, should be
+               straight-forward as no usability-helper functions call.
+
+              -- If ~update, then call function compare_parms(). If
+                 compare_parms() return 0, then abort and ask the user to run
+                 update, so that new database files are created using the new
+                 parms values.
+
+              -- Once the simulation is complete, then if (update), save the
+                 "outs"; or (if test), then compare the outputs using function
+                 compare_outputs(). The function compare_outputs should use a
+                 root-mean-square type of criterion to check if the StateOutput
+                 array is sufficiently close to ref StateOutput array. If not,
+                 more information provided to the user (e.g., plot the different
+                 StateOutput on a single figure to show how both looks visually
+                 and let the user decide what happened)
+
+           This runs the test-scripts with only transient analysis
+
+              (1). run_BJTdiffpairRelaxationOsc_transient.m
+              (2). run_BJTdiffpairSchmittTrigger_transient.m
+              (3). run_BJTdiffpair_transient.m
+              (4). run_BJTschmittTrigger_transient.m
+              (5). run_coupledRCdiodeSpringsMasses_transient.m
+              (6). run_DAAV6_ringosc_spice_netlist_transient.m
+              (7). run_fullWaveRectifier_transient.m
+              (8). run_inverterchain_transient.m
+              (9). run_inverter_transient.m
+             (10). run_parallelLC_transient.m
+             (11). run_parallelRLCdiode_transient.m
+             (12). run_parallelRLC_transient.m
+             (13). run_RCline_transient.m
+             (14). run_resVsrcDiodeRLC_transient.m
+             (15). run_tworeactionchain_transient.m
+             (16). run_UltraSimplePLL_transient.m
+             (17). test_AtoB_RRE_transient.m
+             (18). test_BSIM3_ringosc_transient.m
+             (19). test_connectCktsAtNodes_w_RLCseries_transient.m
+             (20). test_MNAEqnEngine_DAAV6_ringosc_tran.m
+             (21). test_MNAEqnEngine_MVS_no_int_nodes_ringosc_tran.m
+             (22). test_SoloveichikABCosc_RRE_transient.m
+             (23). test_SoloveichikABCoscStabilized_RRE_transient.m 
+
+        -----------------------------------------------------------------------
+        -- run_ALL_AC_tests_on_A1oDAEAPI('rDAEtest','update') 
+        -----------------------------------------------------------------------
+
+            Arguments are optional. However, if arguments are present, the
+            following action, takes place. 
+
+            rDAEtest := if this argument is present, then first run automated
+                        test on the DAE to make sure it passes the test;
+                        otherwise do not. Currently, this will work as just a
+                        place holder till DAE automated tests are in place.
+
+            update   := store the output results in a file; if the file is
+                        present, then overwrite the file. 
+
+           NO ARGUMENTS:= Testing and comparing with reference database; if
+                          reference database is not present, abort and display 
+                          error message asking to run with "update".
+
+            The followings are stored in the .mat file for a particular
+            test-script
+
+
+            Params:
+
+             DC Operating point(input)     The DC operating point at which AC
+                                           analysis to be conducted. Could be
+                                           more than one. 
+
+             NRparms+NRinitguess           For each operating point + NR
+                                           solution at those OP
+
+             fstart, fstop, and fstep
+
+             LTIObj.solution             LTISSS solution
+
+           This runs the test-scripts with only AC analysis
+           
+              (1). run_BJTdiffpair_AC.m
+              (2). run_fullWaveRectifier_AC.m
+              (3). run_RCline_AC.m
+              (4). test_MNAEqnEngine_DAAV6_P_N_AC.m
+
+
+
+        -- run_ALL_misc_tests_on_A1oDAEAPI    
+           This runs the test-scripts with various test combination. There are
+           test-script which does all the three analysis. Do not need to write
+           three test-scripts for those. This will take care of them.
+
+              (1). run_threeStageRingOsc_QSS_transient.m
+              (2). test_MNAEqnEngine_resistive_divider_DC_tran.m
+              (3). test_MNAEqnEngine_vsrc_diode_DC_AC_tran.m
+              (4). test_MNAEqnEngine_vsrcRC_DC_AC_tran.m
+              (5). test_MNAEqnEngine_vsrcRCL_DC_AC_tran.m
+              (6). test_SoloveichikABCoscStabilized_RRE_transient.m 
+          
+           -- combinations of above three plans. 

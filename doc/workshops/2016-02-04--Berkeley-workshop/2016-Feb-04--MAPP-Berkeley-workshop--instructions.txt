@@ -1,0 +1,98 @@
+Dear attendees of the Feb 4 MAPP workshop in Berkeley,
+
+Here are some instructions for preparing for the workshop. Please go through
+these and do the setup _before_ coming to the workshop, since there will not
+be time during the workshop to do the setup.
+
+Below, we describe how to obtain MAPP (the Berkeley Model and Algorithm
+Prototyping Platform) and VAPP (the Berkeley Verilog-A Parser and Processor),
+which you will be using during the workshop. Both are MATLAB based tools, so
+you will need to have MATLAB installed on your own laptop.
+
+
+Step 0: Getting MATLAB
+----------------------
+
+MAPP and VAPP are MATLAB-based tools. To run them, you need a working 
+MATLAB installation on your laptop. If you already have MATLAB working, you
+can go straight to Step 1 below.
+
+If you don't already have MATLAB, one quick option is to get a 30-day trial
+version of MATLAB (for which you will need a good internet connection and at
+least about 6GB of free space on your hard drive). Please visit
+http://mathworks.com and get a trial version.
+
+Step 1: Getting MAPP/VAPP up and running
+----------------------------------------
+
+Assuming you have a working MATLAB, here's how you get MAPP/VAPP working:
+
+1.1. Please download a tarball (a tarball is sort of like a zip file)
+     of MAPP/VAPP from
+     http://mapp.eecs.berkeley.edu/MAPP-VAPP-2016-02-04-workshop.tgz.
+
+1.2. Extract the MAPP/VAPP tarball: 
+
+     - Unix (eg, linux) users: this would be done by running the following
+       command:
+
+        $ tar -xvzf MAPP-VAPP-2016-02-04-workshop.tgz
+     
+     - Microsoft Windows users: please do NOT use winzip to untar the tarball,
+       it can produce unexpected results because some versions mess up soft
+       links, important for MAPP. We recommend you use the free program 7-zip
+       instead. You can download 7zip here: http://www.7-zip.org/. 
+       Please download the very latest version.
+
+     - On OSX (Macs), best to open a command terminal and give the above Unix
+       command (Macs run Unix underneath). We have heard that point and click
+       extraction of tarballs can cause problems in OSX too, but the command
+       line way above is know to work.
+
+     Once extracted, a directory (aka folder) named
+     MAPP-VAPP-2016-02-04-workshop will be created, containing the code for
+     MAPP and VAPP.
+
+1.3. To set up MAPP/VAPP properly, you need to edit one file: 
+     - Please enter the directory ("cd MAPP-VAPP-2016-02-04-workshop") and 
+       edit the file start_MAPP.m using your favourite _text_ editor (please
+       note that Microsoft Word is NOT a text editor; please use, eg, Notepad
+       or MATLAB's built-in editor instead). 
+     - You need to change only the very first line. Please set the variable 
+       "basedir" to a string that contains the full path name of MAPP
+       installation (i.e., the full path to the MAPP-VAPP-2016-02-04-workshop
+       directory created above). Then save the file and exit the editor.
+
+1.4. Set up MATLAB so that MAPP/VAPP start whenever MATLAB is fired up. 
+
+     If you haven't set up your own MATLAB startup script (if you don't 
+     know what this is, you probably don't have one set up), rename 
+     start_MAPP.m to startup.m and move startup.m to a place that
+     MATLAB automatically sources (such as ~/Documents/MATLAB/startup.m 
+     on linux/Windows/Mac OS X).
+     
+     If you already have a MATLAB startup script, you could just append the
+     contents of start_MAPP.m to your existing startup.m script.
+
+1.5. Test that MAPP works correctly. Go (cd to) any directory _outside_ 
+     the MAPP/VAPP installation directory MAPP-VAPP-2016-02-04-workshop. Start
+     MATLAB, and you should immediately see a message saying "This is the
+     Berkeley Model and Algorithm Prototyping Platform" and some version
+     information printed below. This indicates that MAPP is properly installed.
+     To quickly check the correctness of the installation, run the following
+     command at the MATLAB prompt:
+
+         >> MAPPtest_quick()
+
+     This will run several tests on simple devices and circuits in MAPP. It
+     should tell you that all tests have passed. If not, please contact us.
+
+     (We don't have automatic tests for VAPP yet, but it's been installed as
+      part of MAPP).
+
+And that's it. You're now ready for the workshop!
+
+Tianshi Wang, Gokcen Mahmutoglu, Jaijeet Roychowdhury (the MAPP team at Berkeley)
+
+PS: these instructions are downloadable at
+http://mapp.eecs.berkeley.edu/2016-Feb-04--MAPP-Berkeley-workshop--instructions.txt

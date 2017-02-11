@@ -1,0 +1,46 @@
+These are notes taken by Tianshi on how to change DAEAPI.
+
+===============================================================================
+How to change DAEAPI?
+Steps to follow:
+-------------------------------------------------------------------------------
+1. document the changes in 0_DAEAPIv7_doc.m or newer versions of DAEAPI,
+   include some comments indicating that the changes haven't been completed yet
+   make sure it shows up correctly in help DAEAPI
+-------------------------------------------------------------------------------
+2. update check_DAE.m according to the new DAEAPI standards
+-------------------------------------------------------------------------------
+3. update DAEAPI_common_skeleton, DAEAPI_skeleton_core, DAEAPI_common_add_ons,
+     DAEAPI_derivative_add_ons if necessary
+   update exampleDAE.m and example_initlimiting_DAE.m if necessary
+   make sure they both pass check_DAE properly
+-------------------------------------------------------------------------------
+4. update all built-in DAEs if necessary:
+     [TODO] list of available DAEs
+   make sure they all pass check_DAE properly
+-------------------------------------------------------------------------------
+5. update init_DAE.m, add_to_DAE.m, finish_DAE.m if necessary
+   make sure they both pass check_DAE properly
+-------------------------------------------------------------------------------
+6. update all DAE_wrapper DAEs if necessary:
+    BJTdiffpair_wrapper.m
+    parallelRLC_wrapper.m
+    RCline_wrapper.m
+    RLCdiode_wrapper.m
+    TwoReactionChainDAEAPI_wrapper.m
+   make sure they all pass check_DAE properly
+-------------------------------------------------------------------------------
+7. modify MNA_EqnEngine's DAE side such that it conforms to DAEAPI
+   modify STA_EqnEngine's DAE side such that it conforms to DAEAPI
+-------------------------------------------------------------------------------
+8. modify all analyses' DAE side such that it conforms to DAEAPI
+-------------------------------------------------------------------------------
+9. update scripts in DAEAPI/test-scripts, especially
+   run_DAEAPI_functions
+   update data files in DAEAPI/test-data if necessary
+-------------------------------------------------------------------------------
+10. run MAPPtest and all tests we have, make sure nothings is broken
+   delete the comments written in DAEAPI.m in Step 1 now that the changes
+     to DAEAPI have been finished
+   update this list, especially names of additional DAEs in Step 4 and 6
+===============================================================================

@@ -1,0 +1,141 @@
+`include "disciplines.vams"
+`include "constants.vams"
+module RRAM_v0(p, n, ns);
+    inout p, n, ns;
+    electrical p, n, ns;
+    parameter integer f1_switch = 5 from [1:5];
+    parameter integer f2_switch = 6 from [1:6];
+
+    // f1_switch == 1
+    parameter real Ron = 20 from (0:inf);
+    parameter real Roff = 2e4 from (0:inf);
+    // f1_switch == 2
+    parameter real Lambda = 6.91 from (0:inf);
+    // f1_switch == 3
+    parameter integer N = 3 from [1:inf);
+    parameter real Beta = 1e-2 from (0:inf);
+    parameter real Alpha = 2 from (0:inf);
+    parameter real chi = 1e-6 from (0:inf);
+    parameter real Gamma = 4 from (0:inf);
+    // f1_switch == 4
+    parameter real A1 = 0.01 from (0:inf);
+    parameter real A2 = 0.01 from (0:inf);
+    parameter real B = 2 from (0:inf);
+    // f1_switch == 5
+    parameter real g0 = 0.25 from (0:inf);
+    parameter real V0 = 0.25 from (0:inf);
+    parameter real I0 = 1e-3 from (0:inf);
+    parameter real maxGap = 1.7 from (0:inf);
+    parameter real minGap = 0.2 from (0:inf);
+
+    // f2_switch == 1
+    parameter real mu_v = 1e6 from (0:inf);
+    // f2_switch == 2
+    parameter real a = 1e4 from (0:inf);
+    parameter integer m = 3 from (0:inf);
+    // f2_switch == 3
+    parameter real c_off = 1e5 from (0:inf);
+    parameter real c_on = 1e5 from (0:inf);
+    parameter real i_off = 1e-2 from (0:inf);
+    parameter real i_on = 1e-2 from (0:inf);
+    parameter real a_off = 0.6 from (0:inf);
+    parameter real a_on = 0.4 from (0:inf);
+    parameter real wc = 1e3 from (0:inf);
+    parameter real b = 1 from (0:inf);
+    // f2_switch == 4
+    parameter real k_off = 50 from (0:inf);
+    parameter real k_on = -50 from (-inf:0);
+    parameter real v_off = 0.2 from (0:inf);
+    parameter real v_on = -0.2 from (-inf:0);
+    parameter real alpha_off = 3 from (0:inf);
+    parameter real alpha_on = 3 from (0:inf);
+    // f2_switch == 5
+    parameter real Vp = 0.16 from (0:inf);
+    parameter real Vn = 0.15 from (0:inf);
+    parameter real Ap = 4e3 from (0:inf);
+    parameter real An = 4e3 from (0:inf);
+    parameter real xp = 0.3 from (0:inf);
+    parameter real xn = 0.5 from (0:inf);
+    parameter real alphap = 1 from (0:inf);
+    parameter real alphan = 5 from (0:inf);
+    // f2_switch == 6
+    parameter real Vel0 = 10 from (0:inf);
+    parameter real Beta0 = 0.8 from (0:inf);
+    parameter real gamma0 = 16 from (0:inf);
+    parameter real Ea = 0.6 from (0:inf);
+    parameter real a0 = 0.25 from (0:inf);
+    parameter real tox = 12 from (0:inf);
+
+
+    parameter real maxslope = 1e15 from (0:inf);
+    parameter real smoothing = 1e-8 from (0:inf);
+    parameter real GMIN = 1e-12 from (0:inf);
+    parameter real Kclip = 50 from (0:inf);
+
+    real s, f1, f2, Fw1, Fw2, clip_0, clip_1;
+    real y, f1p, f1n, f2p, f2n, Vstar, g_of_vpn, f_of_s, Gap, ddt_gap, gamma_of_Gap;
+	real g_of_vpnp, g_of_vpnn, f_of_sp;
+
+    `include "smoothfunctions.vams"
+
+    analog begin
+        s = V(ns, n); 
+
+        // f1
+        if (1 == f1_switch) begin 
+            y = smoothclip(s - Roff/(Ron-Roff), smoothing) + Roff/(Ron-Roff);
+            f1 = V(p, n) / (Ron*y + Roff*(1-y));
+        end else if (2 == f1_switch) begin 
+            f1 = 1/Ron * safeexp(-Lambda * s, maxslope) * V(p, n);
+        end else if (3 == f1_switch) begin 
+            f1 = pow(s, N)*Beta*safesinh(Alpha*V(p, n), maxslope) + chi*(safeexp(Gamma*V(p, n), maxslope)-1);
+        end else if (4 == f1_switch) begin 
+			f1p = A1 * s * safesinh(B * V(p, n), maxslope);
+			f1n = A2 * s * safesinh(B * V(p, n), maxslope);
+			f1 = smoothswitch(f1n, f1p, V(p, n), smoothing);
+        end else if (5 == f1_switch) begin 
+            f1 = I0*safeexp(-(s*minGap+(1-s)*maxGap)/g0, maxslope)*safesinh(V(p, n)/V0, maxslope);
+        end
+
+        I(p, n) <+ f1 + GMIN*V(p, n); 
+    
+        // f2
+        if (1 == f2_switch) begin 
+            f2 = mu_v * Ron * f1;
+        end else if (2 == f2_switch) begin 
+            f2 = a * pow(V(p, n), m);
+        end else if (3 == f2_switch) begin 
+			f2p = c_off * safesinh(f1/i_off, maxslope) * safeexp(-safeexp((s-a_off)/wc-f1/b, maxslope)-s/wc, maxslope);
+			f2n = c_on * safesinh(f1/i_on, maxslope) * safeexp(-safeexp(-(s-a_on)/wc+f1/b, maxslope)-s/wc, maxslope);
+			f2 = smoothswitch(f2n, f2p, f1, smoothing);
+        end else if (4 == f2_switch) begin 
+            Vstar = V(p, n) - v_off + (v_off - v_on)*s;
+			f2p = k_off * pow(Vstar/v_off, alpha_off);
+			f2n = k_on * pow(Vstar/v_on, alpha_on);
+			f2 = smoothswitch(f2n, f2p, Vstar, smoothing);
+        end else if (5 == f2_switch) begin 
+			Vstar = V(p, n) - (-Vn*s + Vp*(1-s));
+			g_of_vpnp = Ap * (safeexp(V(p, n), maxslope) - safeexp(-Vn*s + Vp*(1-s), maxslope));
+			g_of_vpnn = -An * (safeexp(-V(p, n), maxslope) - safeexp(+Vn*s - Vp*(1-s), maxslope));
+			g_of_vpn = smoothswitch(g_of_vpnn, g_of_vpnp, Vstar, smoothing);
+
+			f_of_sp = smoothswitch(1, safeexp(-alphap*(s-xp), maxslope), s-xp, smoothing);
+			f_of_s = smoothswitch(safeexp(alphan*(s-1+xn), maxslope), f_of_sp, s-1+xn, smoothing);
+
+            f2 = g_of_vpn * f_of_s;
+        end else if (6 == f2_switch) begin 
+            Gap = s*minGap+(1-s)*maxGap;
+            gamma_of_Gap = gamma0 - Beta0 * pow(Gap, 3); 
+            f2 = 1e9*(maxGap-minGap) * Vel0*exp(-Ea/$vt)*safesinh(V(p, n)*gamma_of_Gap*a0/tox/$vt, maxslope);
+        end
+
+        f2 = 1e-9*f2;
+        Fw1 = smoothstep(0-s, smoothing);
+        Fw2 = smoothstep(s-1, smoothing);
+        clip_0 = (safeexp(Kclip*(0-s), maxslope) - f2) * Fw1;
+        clip_1 = (-safeexp(Kclip*(s-1), maxslope) - f2) * Fw2;
+
+        I(ns, n) <+ f2 + clip_0 + clip_1;
+        I(ns, n) <+ ddt(-1e-9*s);
+    end 
+endmodule

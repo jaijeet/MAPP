@@ -1,0 +1,31 @@
+%basedir='@MAPPLOCALLINKSDIR@'; % no longer needed here; start_MAPP sets this up
+addpath(sprintf('%s/@VECVALDER@', basedir));
+addpath(sprintf('%s/@UTILS@', basedir));
+addpath(sprintf('%s/@VECVALDER@/tests', basedir));
+addpath(sprintf('%s/@MODSPEC@', basedir));
+addpath(sprintf('%s/@DAEAPI@', basedir));
+addpath(sprintf('%s/@A1oDAEAPI@', basedir));
+addpath(sprintf('%s/@VECVALDER@/vv4-tests', basedir));
+addpath(sprintf('%s/@VECVALDER@/vv4-MATLAB', basedir));
+if ~strcmp('@VAPP@', '')
+    addpath(sprintf('%s/@VAPP@', basedir));
+    addpath(sprintf('%s/@VAPP@/backend'                , basedir));
+    addpath(sprintf('%s/@VAPP@/frontend'               , basedir));
+    addpath(sprintf('%s/@VAPP@/frontend/VALint_rules'  , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/utils'          , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/print_templates', basedir));
+    addpath(sprintf('%s/@VAPP@/doc'                    , basedir));
+end
+if ~strcmp('@A2oDAEAPI@', '')
+    addpath(sprintf('%s/@A2oDAEAPI@', basedir));
+end
+if ~strcmp('@A3oDAEAPI@', '')
+    addpath(sprintf('%s/@A3oDAEAPI@', basedir));
+end
+if ~strcmp('@CONTRIBS@', '')
+    addpath(sprintf('%s/@CONTRIBS@', basedir));
+end
+if ~strcmp('@OPTO@', '')
+    addpath(sprintf('%s/@OPTO@', basedir));
+end
+addpath(genpath(sprintf('%s/@DOCUMENTATION@', basedir)));

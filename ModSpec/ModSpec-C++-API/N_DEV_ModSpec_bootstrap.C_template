@@ -1,0 +1,12 @@
+#include <Xyce_config.h>
+#include <N_DEV_@{model_name}.h>
+
+struct Bootstrap 
+{
+  Bootstrap() 
+  {
+    Xyce::Device::@{model_name}::registerDevice();
+  }
+};
+
+Bootstrap s_bootstrap;

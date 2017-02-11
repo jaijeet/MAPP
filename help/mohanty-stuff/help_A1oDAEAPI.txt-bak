@@ -1,0 +1,29 @@
+
+Basic analyses on differential equations represented by DAEAPI. 
+
+
+A1oDAEAPI HELP Topic:
+--------------------------------------------------------------------------------------------
+A1oDAEAPI/analyses-algorithm    - Basic analyses (DC, AC, and transient) on circuits described by DAEAPI
+A1oDAEAPI/test-scripts          - MATLAB API to describe circuits as nonlinear DAEs
+A1oDAEAPI/usability-helpers     - MATLAB API to describe compact models
+A1oDAEAPI/utils                 - Package to perform automatic differentiation in MATLAB/Ocatave
+
+Analysis Algorithms
+-------------------
+LMS
+LMSmethods
+NR
+QSS
+QSSsens
+
+Usuability Functions
+--------------------
+dot_op
+run_transient_GEAR2
+run_transient_TRAP
+
+Test Scripts
+------------
+
+This is MAPP-$version, the Berkeley Model and Algorithm Prototyping Platform.

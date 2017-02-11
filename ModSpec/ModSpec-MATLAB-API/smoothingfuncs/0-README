@@ -1,0 +1,34 @@
+- run RUNME.m in matlab to see plots of the functions below
+
+- note: the two basic functions smoothabs and safeexp
+  - everything else is derived from these two (currently, all are derived
+    from smoothabs)
+
+- utility functions:
+  - smoothabs, dsmoothabs, ddsmoothabs
+    - try using a Gaussian as the base, rather than sqrt
+      - might have much stronger damping properties, making
+	d/dx(x*d/dx(smoothabs(x))) monotonic
+	     ^^^^^^^^^^^^^^^^^^^^
+	     this itself is another smoothabs(x)
+	- need to understand this precisely
+      - currently: smoothabs(x,s) = sqrt(x^2 + s)
+      - how about sqrt(-log(e^(-x^2 + s)))?
+        - probably won't do much good
+      - intuitively: if we can make d/dx(smoothabs(x)) decay faster than
+        any polynomial of x - maybe somehow like a Gaussian, then it might be
+	good - suggest use erfc(x) for smoothabs
+     - in fact, erfc(x/s) is probably a great smoothsign(x)
+       - can we prove that x erfc(x) ~= smoothabs(x) >= 0?
+  - smoothclip, dsmoothclip, ddsmoothclip
+  - smoothstep, dsmoothstep
+  - smoothswitch, dsmoothswitch
+  - smoothsign, dsmoothsign
+  - safelog, dsafelog
+  - safesqrt, dsafesqrt
+  - safeexp, dsafeexp
+  - smoothmax, dsmoothmax
+  - smoothmin, dsmoothmin
+  - dtanh
+  - plotfuncWtwoArgs
+  - plotfuncWthreeArgs

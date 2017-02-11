@@ -1,0 +1,50 @@
+// Test-bench for generating transient response of a 5-stage ring oscillator
+// TESTED ON SPECTRE Version 10.1.1.374.isr21
+
+simulator lang=spectre 
+ahdl_include "mvs_si_1_0_1.va"
+format options rawfmt=psfascii
+
+//Library name: mvs_si_1_0_1
+subckt inverter Vin Vout Vvdd Vgnd
+I1 (Vvdd Vin Vout Vvdd) mvs_si_1_0_1 type=-1 W=1.0e-4 Lgdr=32e-7 \
+         dLg=8e-7 Cg=2.57e-6 beta=1.8 alpha=3.5 Tjun=300\
+	 Cif = 1.38e-12 Cof=1.47e-12 phib=1.2 gamma=0 mc=0.2 CTM_select=1 \
+	Rs0=100 Rd0 = 100 n0=1.68 nd=0.1 vxo=7542204 mu=165.79 Vt0=0.5535 delta=0.15 
+I0 (Vout Vin Vgnd Vgnd) mvs_si_1_0_1 type=1 W=1e-4 Lgdr=32e-7 \
+	dLg=9e-7 Cg=2.57e-6 beta=1.8 alpha=3.5 Tjun=300\
+	Cif=1.38e-12 Cof=1.47e-12 phib=1.2 gamma=0 mc=0.2 CTM_select=1 \
+	Rs0=100 Rd0=100 n0=1.68 nd=0.1 vxo=1.2e7 mu=200 Vt0=0.4 delta=0.15
+c1 (Vout Vgnd) capacitor c=3f
+ends inverter
+
+parameters vdi=1
+Vsup (sup 0) vsource dc=vdi 
+
+
+Inv1 (n1 n2 sup 0) inverter
+Inv2 (n2 n3 sup 0) inverter
+Inv3 (n3 n4 sup 0) inverter
+Inv4 (n4 n5 sup 0) inverter
+Inv5 (n5 n1 sup 0) inverter
+
+ic n1=vdi
+
+tran_RO5 tran step=0.1p stop=200p method=trap save=all
+
+simulatorOptions options reltol=1e-3 vabstol=1e-6 iabstol=1e-12 temp=27 \
+    tnom=27 scalem=1.0 scale=1.0 gmin=1e-12 rforce=1 maxnotes=5 maxwarns=5 \
+    digits=5 cols=80 pivrel=1e-3 sensfile="../psf/sens.output" \
+    checklimitdest=psf 
+
+// add cmin=1e-18 in simulatorOptions line to achieve better convergence.
+// check for cmin compatability with older Spectre versions.
+
+// following lines can be uncommented to store results in rawfile.
+// modelParameter info what=models where=rawfile
+// element info what=inst where=rawfile
+// outputParameter info what=output where=rawfile
+// designParamVals info what=parameters where=rawfile
+// primitives info what=primitives where=rawfile
+// subckts info what=subckts  where=rawfile
+// saveOptions options save=allpub

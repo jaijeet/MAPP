@@ -1,0 +1,10 @@
+This directory contains code snippets from the Xyce ModSpec interface file 
+<XyceBerkeleyDir>::N_DEV_ModSpec_Device.C. These code snippets are being
+tested here.
+
+Run make, and then run the created executables.
+
+To understand what's going on, read:
+
+1. Xyce_ModSpec_Interface_doc.txt
+2. Xyce_ModSpec_Notes.txt

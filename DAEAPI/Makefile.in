@@ -1,0 +1,124 @@
+CYGWINPREFIX=@CYGWINPREFIX@
+DAEAPITOP=`pwd`
+DAEAPIVERSION=@DAEAPIVERSION@
+DAEAPIINSTALLTOPDIR=$(CYGWINPREFIX)@prefix@
+	# WATCH OUT for terminating spaces in the above!
+DAEAPIINSTALLDIR=$(DAEAPIINSTALLTOPDIR)/lib/DAEAPI
+#RELVERSIONCMD=`head -n 1 00-VERSION | sed -e 's/ /_/g'`
+#RELVERSION="${RELVERSIONCMD}"
+RELVERSION=$(DAEAPIVERSION)
+#RELVERSIONEXT="${RELVERSIONCMD}-release"
+RELVERSIONEXT="$(RELVERSION)-release"
+MODSPECINSTALLDIR=@MODSPECINSTALLDIR@
+VECVALDERINSTALLDIR=@VECVALDERINSTALLDIR@
+NETLISTPARSERINSTALLDIR=@NETLISTPARSERINSTALLDIR@
+TMPDIR=/var/tmp
+
+MATLAB_SUBDIRS = DAEs utils test-scripts device-models
+
+all: ./utils/setuppaths_DAEAPI.m staging pcode
+	@echo "Next step:"
+	@echo "	$$ make install # will install to $(DAEAPIINSTALLTOPDIR)"
+	@echo ""
+	@echo "  [To clean up:"
+	@echo "  	$$ make clean # remove make-generated files (eg, ./staging)"
+	@echo "  	$$ make installclean # remove installation in $(DAEAPIINSTALLTOPDIR)"
+	@echo "  	$$ make autoclean # remove autoconf-generated files"
+	@echo "  	$$ make cleaneverything # do all the above"
+	@echo "  ]"
+	@echo ""
+
+staging: 
+	@if [ ! -e staging ]; then mkdir staging; fi
+	@cd staging; ln -s ../DAEs/*.m ../device-models/*.m ../doc/*.m ../utils/*.m ../test-scripts/*.m .
+	@echo "staging/ directory with soft links created."
+
+./utils/setuppaths_DAEAPI.m: ./utils/setuppaths_DAEAPI_template.m
+	@echo "creating $@";
+	@cat $< | sed -e 's#__VECVALDERINSTALLDIR__#$(VECVALDERINSTALLDIR)#g' -e 's#__MODSPECINSTALLDIR__#$(MODSPECINSTALLDIR)#g' \
+		-e 's#__NETLISTPARSERINSTALLDIR__#$(NETLISTPARSERINSTALLDIR)#g' -e 's#__DAEAPIINSTALLDIR__#$(DAEAPIINSTALLTOPDIR)#g' >| $@;
+	@
+
+makeDAEAPIINSTALLDIR: installclean
+	@ mkdir -p $(DAEAPIINSTALLDIR)
+	@ echo "created $(DAEAPIINSTALLDIR)"
+	@echo ""
+
+pcode: ./utils/setuppaths_DAEAPI.m
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(fname=$$(echo $$dir/*.m | awk '{print $$1}'); if [ -e $$fname ]; then cd $$dir; echo "making pcode in $$dir"; echo "pcode *.m" | matlab -nodesktop -nosplash -nojvm; fi) \
+	done
+
+
+installsrcreal: makeDAEAPIINSTALLDIR 
+	@tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude DAEAPI-for-Sayeef --exclude "*.p" -cf - . | (cd $(DAEAPIINSTALLDIR); tar xf -)
+	@echo "Done with (source) installation."
+	@echo ""
+
+installsrc: installsrcreal installmsg
+
+installmsg:
+	@echo "---------------------------------------------------------------"
+	@echo "DAEAPI Quickstart: in MATLAB:"
+	@echo '	> addpath '"$(DAEAPIINSTALLDIR)/utils"
+	@echo '	> setuppaths_DAEAPI'
+	@echo '	> run_ALL_DAEAPI_tests'
+	@echo ""
+	@echo "See $(DAEAPIINSTALLDIR)/0-README for more information."
+	@echo ""
+
+installreal: pcode makeDAEAPIINSTALLDIR 
+	@tar --exclude ".svn" --exclude "configure*" --exclude "Makefile*" --exclude config.status --exclude autom4te.cache --exclude config.log --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude DAEAPI-for-Sayeef --exclude "*.m" -cf - . | (cd $(DAEAPIINSTALLDIR); tar xf -)
+	@echo "Done with (pcode) installation."
+	@echo ""
+
+install: installreal installmsg
+
+installclean:
+	@echo "removing $(DAEAPIINSTALLTOPDIR)..."
+	@rm -fr $(DAEAPIINSTALLTOPDIR)
+	@echo ""
+
+autoclean: 
+	@rm -fr ./configure config.status autom4te.cache config.log ./Makefile
+
+cleaneverything: clean installclean autoclean
+
+clean:
+	@if [ -d ./staging ]; then FILES=`find ./staging -mindepth 1 -not -type l -print`; if [ "$$FILES" != "" ]; then echo "./staging contains non-soft-links: $${FILES}"; echo "Please move the above files out of ./staging/, then run make clean again."; else echo "removing ./staging/."; rm -fr staging; fi; fi
+	@echo "removing ./utils/setuppaths_DAEAPI.m"; rm -f ./utils/setuppaths_DAEAPI.m 
+	@echo "removing all generated .p files"
+	@for dir in $(MATLAB_SUBDIRS); do \
+		(cd $$dir; rm -f *.p) \
+	done
+
+
+snapshot:
+	@echo "making snapshot ${RELVERSION}..."
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@ln -sT ${DAEAPITOP} ${TMPDIR}/${RELVERSION}
+	@cd ${TMPDIR}/${RELVERSION}; if [ -e Makefile ]; then make -i autoclean; fi
+	@tar -C ${TMPDIR} --exclude "*.svn" --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude DAEAPI-for-Sayeef -hzcvf "${TMPDIR}/${RELVERSION}".tgz "${RELVERSION}" > /dev/null
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@echo DAEAPI snapshot tarball ${TMPDIR}/${RELVERSION}.tgz created.
+	@echo ""
+
+release:
+	@echo "making release ${RELVERSIONEXT}..."
+	@echo ""
+	@cd ${DAEAPITOP}; if [ -e Makefile ]; then make -i autoclean; fi
+	@cd ${DAEAPITOP}; autoconf; rm -fr autom4te.cache
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@mkdir ${TMPDIR}/${RELVERSIONEXT}
+	@tar -C ${DAEAPITOP} --exclude ./staging --exclude ./not-in-svn --exclude ./junk --exclude DAEAPI-for-Sayeef -hcf - . | tar -C ${TMPDIR}/${RELVERSIONEXT} -xf -
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}/configure.ac
+	@cd ${TMPDIR}/${RELVERSIONEXT}; if [ -e Makefile ]; then make -i autoclean; fi
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}.tgz
+	@tar -C ${TMPDIR} --exclude ./staging --exclude "*.svn" -hzcvf "${TMPDIR}/${RELVERSIONEXT}".tgz "${RELVERSIONEXT}" > /dev/null
+	@echo ""
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@echo DAEAPI release tarball ${TMPDIR}/${RELVERSIONEXT}.tgz created.
+	@echo ""
+

@@ -1,0 +1,53 @@
+vecvalder is a Matlab/Octave class that performs automatic differentiation
+of Matlab code.
+
+- vecvalder is built on top of @valder by Richard D. Neidinger. See:
+  - Richard D. Neidinger, "Introduction to Automatic Differentiation 
+    and MATLAB Object-Oriented Programming", SIAM Review, Vol. 52, No. 3, 
+    pp. 545–563, 2010.
+    - available at http://www.davidson.edu/math/neidinger/SIAMRev74362.pdf.
+
+- vecvalder authors: 
+  - David Amsallem <amsallem@berkeley.edu> (original version, ~2011/10/01)
+  - Jaijeet Roychowdhury <jr@berkeley.edu>
+
+- License: [release-license.html GPLv3].
+
+- Version number and changelog
+   - see the file ./00-VERSION
+
+=============================================================================
+-- Quickstart, step 0: installing it from source (skip this step if you are 
+   using a binary release)
+   - autoconf
+   - ./configure [--prefix=/where/to/install/vecvalder]
+     # default location is $HOME/local/pkgs/vecvalder
+   - make
+   - make install
+   - follow the instructions at the end of make install to test
+
+-- Quickstart, step 1: running the included tests 
+   - cd ./tests/
+   - matlab
+     > addpath .. % ie, the directory containing @vecvalder
+     > run_ALL_vecvalder_tests
+
+-- Quickstart, step 2: using vecvalder within your own code
+   - this documentation has been moved to [MAPPTOP]/help/MAPPautodiff.m
+
+-- TODOs
+   - size checks seem to be missing for all binary operators
+   - overload the following operators: (see http://www.mathworks.com/help/techdoc/matlab_oop/br02znk-1.html)
+     - rdivide - currently missing
+     - power - currently linked to mpower
+     - we also need a matvalder class which interacts with vecvalder
+       - so that valders can be in matrix entries, too - useful for parameter
+         sensitivities.
+     - operator= ?
+     - copy constructor ?
+     - length - builtin seems to work
+     - size - builtin seems to work
+     - vertcat - builtin seems to work
+     - horzcat - builtin leads to error - this is how it should be
+     - subsindex - indexing with object indices; not needed
+

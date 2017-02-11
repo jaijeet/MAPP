@@ -1,0 +1,964 @@
+#!/bin/bash
+LocalMAPPDir='@MAPPLOCALLINKSDIR@';
+# VARIABLE DEFINITION 
+doc_dir=$LocalMAPPDir"/Documentation" #Documentation" #MAPP_help"
+####################FUNCTIONS#######################################
+find_subfunction_comments(){
+        # echo "starting find_subfunction_comments"
+        local file=$1
+        #echo "The original filename is $original_filename
+        # Check if the script has keywords function 
+        # Storing the line numbers where the word "function" occurs. 
+        lineN_array=( $(grep -no "^[ ]*function" $file|cut -d ':' -f1) )
+
+        # No. of elements in lineN_array. This is the number of times
+        # keyword "function" appear in the file
+        N_lineN_array=${#lineN_array[@]}
+
+        # One less as the first occurrence does not count and modify
+        # accordingly.
+        lineN_array=( ${lineN_array[@]:1:$N_lineN_array} )
+        let N_lineN_array=${N_lineN_array}-1 
+
+        # Now start gathering "comments" associated with each keyword
+        # "function"
+        function_count=1; # Counter for all the functions present in the file
+
+        # Looping through all the function names
+        while [ $function_count -le $N_lineN_array ]
+        do
+                # echo $function_count
+                found_equal=0
+                found_open_parenthesis=0
+                # Looping through all the lines to find function name
+                while [ $found_equal -eq "0" ] && [ $found_open_parenthesis -eq "0" ]
+                do
+                        let internal_line_number=${lineN_array[$function_count-1]}
+                        line=$(sed -n "${internal_line_number}p" $file) 
+                        #sleep 5
+
+                        # But, before that gather the names of the functions
+
+                        # First, does the line containing keyword "function" also
+                        # contain an equal sign
+                        does_the_line_contain_equals_sign=$(echo $line | grep -q "="; echo $?);
+                        # Recall that above assignment is 0 if it is true. So let us
+                        # correct this.
+
+                        # Second, does the line containing keyword "function" also
+                        # contain an open parenthesis 
+                        does_the_line_contain_open_parenthesis=$(echo $line | grep -q "("; echo $?);
+                        # Recall that above assignment is 0 if it is true. So let us
+                        # correct this.
+
+                        if [ $does_the_line_contain_equals_sign -eq "0" ] ; then
+                                let found_equal=1
+                        else
+                                if [ $does_the_line_contain_open_parenthesis -eq "0" ]; then
+                                        # contains open parenthesis, but
+                                        # not equal sign
+                                        let found_open_parenthesis=1
+                                else
+                                        let internal_line_number=$internal_line_number+1
+                                fi
+                        fi
+                done
+
+                if [ $found_equal -eq "1" ]; then
+                        # Assumption is :: If you find "=", then the function
+                        # name either is in that line or next line. There are
+                        # five possibilities:
+                        # 1. " = function_name (..."
+                        # 2. " = function_name ..."
+                        # 3. "= function_name (arg1, ..."
+                        # 4. "= function_name(arg1, arg2, ..., argn)"
+                        # 5. "xxx =..."
+
+                        # Already defined previously:: line=$(sed -n "${internal_line_number}p" $file) 
+
+                        # First strip anything after ... (inclusive)
+                        line=`echo "$line" |sed -e 's/\..*$//g'`
+                        # Third, strip anything after ( (inclusive)
+                        line=`echo "$line" |sed -e 's/(.*$//g'`
+                        # Strip any leading and trailing spaces
+                        line=`echo $line|sed 's/^\s*//g'` # leading
+                        line=`echo $line|sed 's/\s*$//g'` # trailing
+                        # Find out if the last character of the line is
+                        # the equal sign
+                        is_the_last_character_equal=$( echo "${line: -1}")
+                        if [ $is_the_last_character_equal = "=" ]; then
+                                # go to the next line and pick up the
+                                # function name
+                                let internal_line_number=$internal_line_number+1
+                                line=$(sed -n "${internal_line_number}p" $file) 
+                                # Strip anything from "(" to end 
+                                function_name=`echo $line|sed 's/(.*$//g'` 
+                                # Strip trailing and leading spaces
+                                function_name=`echo $function_name|sed 's/^\s*//g'` # leading
+                                function_name=`echo $function_name|sed 's/\s*$//g'` # trailing
+
+                        else
+                                # find the name of the function
+                                # Strip anything from beginning to =
+                                function_name=`echo $line|sed 's/^.*=//g'` 
+                                # Strip trailing and leading spaces
+                                function_name=`echo $function_name|sed 's/^\s*//g'` # leading
+                                function_name=`echo $function_name|sed 's/\s*$//g'` # trailing
+                        fi
+                else
+                        if [ $found_open_parenthesis -eq "1" ]; then
+                                # Assumption is :: If you find "(" but not "=", then the
+                                # function name either is in that line or next line.
+                                # There are two possibilities:
+                                # 1. " (..." :: function name is in the previous line
+                                # 2. "function_name( ..." :: function_name is in the
+                                # same line
+
+                                # Already defined previously:: line=$(sed -n "${internal_line_number}p" $file) 
+
+                                # First strip anything after ... (inclusive)
+                                line=`echo "$line" |sed -e 's/\..*$//g'`
+                                # Third, strip anything after ( (inclusive)
+                                line=`echo "$line" |sed -e 's/(.*$//g'`
+                                # Strip any leading and trailing spaces
+                                line=`echo $line|sed 's/^\s*//g'` # leading
+                                line=`echo $line|sed 's/\s*$//g'` # trailing
+                                if [ -z "$line" ]; then
+                                        # go to previous line and find
+                                        # function name. Function anem
+                                        # is the last word of previous
+                                        # line
+                                        let internal_line_number=$internal_line_number-1
+                                        line=$(sed -n "${internal_line_number}p" $file) 
+                                        # First strip anything after ... (inclusive)
+                                        line=`echo "$line" |sed -e 's/\..*$//g'`
+                                        # Third, strip anything after ( (inclusive)
+                                        line=`echo "$line" |sed -e 's/(.*$//g'`
+                                        # Strip any leading and trailing spaces
+                                        line=`echo $line|sed 's/^\s*//g'` # leading
+                                        line=`echo $line|sed 's/\s*$//g'` # trailing
+                                        function_name=`echo $line | awk '{ print $NF }'`
+
+                                else
+                                        # find function_name in the
+                                        # current line which is the last
+                                        # word of current line
+                                        function_name=`echo $line | awk '{ print $NF }'`
+                                fi
+                        else
+                                echo "ERROR in function find_subfunction_comments()"
+                                break
+                                exit 1
+                        fi
+                fi
+                # echo "line 154"
+                # echo $file $function_name
+
+                # Now we have to find ")" : the closing parenthesis
+                found_close_parenthesis=0
+
+                while [ $found_close_parenthesis -eq "0" ]
+                do
+                        line=$(sed -n "${internal_line_number}p" $file) 
+                        # Does the line contain a closing parenthesis
+                        present_close_parenthesis=$(echo $line | grep -q ")"; echo $?);
+                        # Recall that above assignment is 0 if it is true. So let us
+                        # correct this.
+                        # let present_closing_parenthesis=(!($present_closing_parenthesis))
+                        # If the line does not have a close parenthesis, go to
+                        # next line
+                        if [ $present_close_parenthesis -ne "0" ]; then
+                                # go to next line
+                                let internal_line_number=$internal_line_number+1
+                                # read the next line
+                                line=$(sed -n "${internal_line_number}p" $file) 
+                        else
+                                let found_close_parenthesis=1
+                        fi
+                done
+                #let internal_line_number=${lineN_array[$function_count-1]}
+                # line=$(sed -n "${internal_line_number}p" $file) 
+                true_or_false=1;
+                total_lines=`awk 'END {print NR}' $file`
+                original_filename=`basename $file|sed 's/\..*$//'`
+                did_u_find_nonempty_lines=0;
+                did_u_find_comments=0;
+                while [ $true_or_false -eq 1 ] 
+                do  
+                        # Increment line number
+                        let internal_line_number=$internal_line_number+1
+                        # Remove any whitespaces at the beginning of the line
+                        line_temp=`sed -n "${internal_line_number}p" $file|sed 's/^\s*//g'`
+                        #if the line is empty
+                        if [ "$line_temp" == "" ]
+                        then
+                                if [ "$did_u_find_nonempty_lines" -eq "1" ]
+                                then
+                                  #      echo "%The help for this sub-function is incomplete <TODO>.">>"./""${original_filename}::${function_name}.m"
+                                        true_or_false=0;
+                                fi
+                        else
+                                # Is the first character %
+                                did_u_find_nonempty_lines=1;
+                                is_it_percent=$(echo "$line_temp" | head -c1)
+                                if [ "$is_it_percent" == "%" ] 
+                                then
+                                        let did_you_find_comments=1;
+                                        temp1=`echo "$line_temp" `
+                                        # echo "echoing line 208"
+                                        # echo "$temp1"
+                                        # echo "$doc_dir""/""${original_filename}::${function_name}.m"
+
+                                        echo "$temp1">>"$doc_dir""/""${original_filename}::${function_name}.m"
+                                else
+                                        if [ "$did_u_find_comments" -eq "0" ]
+                                        then
+                                                echo "%The help for this sub-function is incomplete <TODO>.">>"$doc_dir""/""${original_filename}::${function_name}.m"
+                                        fi
+                                        true_or_false=0;
+                                fi  
+                        fi
+                done
+                let function_count=$function_count+1
+        done 
+}
+
+
+######################################################################
+##########
+function wrap_n_indent()
+{
+        local local_file=$1
+        local where_to_write=$2
+        add_line=`basename $local_file|sed 's/\..*$//'`
+          dots="............................................"
+        spaces="                                             "
+        temp1=`sed -n '3p' $local_file|sed 's/^%*//'`        
+        if [ -f oof1.txt ] 
+        then
+                rm  oof1.txt
+        fi
+        if [ -f oof2.txt ] 
+        then
+                rm  oof2.txt
+        fi
+        echo "$add_line" >> oof1.txt; ./dev-tools/format-text.sh oof1.txt > oof11.txt
+        # find out how many lines are there in oof11.txt
+        no_lines_oof11=$(wc -l oof11.txt | awk '{print $1}');
+        echo "$temp1" >> oof2.txt; ./dev-tools/format-text.sh oof2.txt > oof22.txt
+        no_lines_oof22=$(wc -l oof22.txt | awk '{print $1}');
+        # Get the max. number of lines
+        unset temp11 temp12 temp
+        temp11=`sed -n '1p' oof11.txt`        
+        temp12=`sed -n '1p' oof22.txt`        
+        temp=`echo  "%$temp11""${dots:${#temp11}}""$temp12"`;
+        echo  ${temp}>> "$doc_dir/"$where_to_write".m"
+
+        unset temp11 temp12 temp
+        count=2;
+        unset true_of_false;
+        true_of_false=1;
+        true_or_false=1;
+        if [ "$no_lines_oof22" -ge "$no_lines_oof11" ]
+        then
+                while [ "$true_or_false" -eq "1" ]
+                do
+                        if [ "$count" -gt "$no_lines_oof11" ]
+                        then
+                                temp11="%"
+                                # echo "$temp11"
+                                temp12=$(sed -n "${count}p" oof22.txt)
+                                temp=`echo  "$temp11""${spaces:${#temp11}}""$temp12"`
+                                echo  "${temp}">>"$doc_dir/"$where_to_write".m"
+                                unset temp11 temp12 temp
+                        else
+                                temp11=$(sed -n "${count}p" oof11.txt)
+                                temp12=$(sed -n "${count}p" oof22.txt)
+                                temp=`echo  "%$temp11""${spaces:${#temp11}}""$temp12"`;
+                                echo  "${temp}">> "$doc_dir/"$where_to_write".m"
+                                unset temp11 temp12 temp
+                        fi
+                        if [ "$count" -ge "$no_lines_oof22" ]
+                        then
+                                true_or_false=0;
+                        fi
+
+                                (( count++ ))
+                done
+        else
+                while [ "$true_or_false" -eq "1" ]
+                do
+                        if [ "$count" -gt "$no_lines_oof22" ]
+                        then
+                                temp11=$(sed -n "${count}p" oof11.txt)
+                                temp12=$(sed -n "${count}p" oof22.txt)
+                                temp=`echo  "%$temp11""${spaces:${#temp11}}""$temp12"`
+                                echo  "${temp}">>"$doc_dir/"$where_to_write".m"
+                                unset temp11 temp12 temp
+                        else
+                                temp11=$(sed -n "${count}p" oof11.txt)
+                                temp12=$(sed -n "${count}p" oof22.txt)
+                                temp=`echo "%$temp11""${spaces:${#temp11}}""$temp12"`;
+                                echo  "${temp}">> "$doc_dir/"$where_to_write".m"
+                                unset temp11 temp12 temp
+                        fi
+                        if [ "$count" -ge "$no_lines_oof11" ]
+                        then
+                                true_or_false=0;
+                        fi
+
+                                (( count++ ))
+                done
+        fi
+        rm oof*
+}
+##########################################################
+# First mannual create help on topics for which the function
+# does not exists, such as MAPP, 
+
+##########temp###############
+#rm -r $LocalMAPPDir"/Documentation/"
+
+echo "Generating documentation (this can take a while) ..."
+# mkdir $LocalMAPPDir"/Documentation/"
+cp ./help/help_MAPP.txt $LocalMAPPDir"/Documentation/MAPP.m"
+sed -i "s/^/%/g" $LocalMAPPDir"/Documentation/MAPP.m"
+cp ./help/*.m $LocalMAPPDir/Documentation/
+
+if [ 0 == 1 ]; then # JR, 2013/09/27
+	# Create a temporary file
+	#cp ./vecvalder/0-README temp.txt
+	rm ./help/MAPPvecvalder.m
+	cp ./vecvalder/0-README ./help/MAPPvecvalder.m
+	sed -i "s/^/%/g" ./help/MAPPvecvalder.m 
+	#sed -i "s/^/%/g" temp.txt
+	#sed -i '/VECVALDERREADME/r temp.txt' $LocalMAPPDir"/Documentation/MAPP.m"
+	#sed  -i "s/VECVALDERREADME//g" $LocalMAPPDir"/Documentation/MAPP.m"
+	#rm temp.txt
+	cp ./help/*.m $LocalMAPPDir"/Documentation/"
+
+	#mkdir $LocalMAPPDir"/Documentation/A1oDAEAPI"
+	cp ./help/help_A1oDAEAPI.txt $LocalMAPPDir"/Documentation/A1oDAEAPI.m"
+	sed -i "s/^/%/g" $LocalMAPPDir"/Documentation/A1oDAEAPI.m"
+
+	a_algo="analyses-algorithms"
+	#mkdir $LocalMAPPDir"/Documentation/A1oDAEAPI/"$a_algo
+	# Add a line "Analyses Algorithm"
+	echo -e "%\n%Analyses Algorithms">>"$doc_dir/"$a_algo".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "Analyses Algorithm"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$a_algo".m"
+fi 
+
+# Folders in A1oDAEAPI which should be added to the help system
+A1_dir="./Analyses1-on-DAEAPI"
+A1_analyses="$A1_dir/analyses-algorithms/" 
+i=1
+while read line
+do  
+	file_names[ $i ]="$line"    
+	(( i++ ))
+done < <( find ${A1_analyses} -name "*.m")
+
+#mkdir "$doc_dir/A1oDAEAPI/analyses-algorithms"
+
+for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+do
+	# JR, 2013/09/27 wrap_n_indent $file  MAPPanalyses #$a_algo
+	# echo $file
+	# echo "$doc_dir/"$a_algo".m"
+	find_subfunction_comments "$file" #doc_dir/"$a_algo".m"
+done
+
+
+if [ 0 == 1 ]; then
+	a_use="analyses-usability-helpers"
+	#mkdir $LocalMAPPDir"/Documentation/A1oDAEAPI/"$a_use
+	# Add a line "Utility Helpers"
+	echo -e "%\n%Usability Helpers">>"$doc_dir/"$a_use".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "Usability helpers"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$a_use".m"
+fi
+
+# Folders in A1oDAEAPI which should be added to the help system
+A1_uh="$A1_dir/usability-helpers/" 
+i=1
+while read line
+do  
+        file_names[ $i ]="$line"    
+        (( i++ ))
+done < <( find ${A1_uh} -name "*.m")
+
+#mkdir "$doc_dir/A1oDAEAPI/analyses-algorithms"
+
+for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+do
+        add_line="%"`basename $file|sed 's/\..*$//'`
+        spaces="......................"
+        temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+        #printf "%s\n"   $add_line
+        temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+        # echo $temp
+        echo  ${temp}>>"$doc_dir/"$a_use".m"
+done
+
+if [ 0 == 1 ]; then
+	# Add a line "Utilities"
+	a_util="analyses-utils"
+	#mkdir $LocalMAPPDir"/Documentation/A1oDAEAPI/"$a_util
+	echo -e "%\n%Utilites">>"$doc_dir/"$a_util".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "Utilities"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$a_util".m"
+
+	# Folders in A1oDAEAPI which should be added to the help system
+	A1_uh="$A1_dir/utils/" 
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${A1_uh} -name "*.m")
+
+	#mkdir "$doc_dir/A1oDAEAPI/analyses-algorithms"
+
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="......................................."
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$a_util".m"
+	done
+
+	# Add a line "Utilities"
+	a_dem="analyses-test-scripts"
+	#mkdir $LocalMAPPDir"/Documentation/A1oDAEAPI/"$a_dem
+	# Add a line "Test Cases"
+	echo -e "%\n%Examples">>"$doc_dir/"$a_dem".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "Examples"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$a_dem".m"
+	# Folders in A1oDAEAPI which should be added to the help system
+	A1_uh="$A1_dir/test-scripts/" 
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${A1_uh} -name "*.m")
+
+	#mkdir "$doc_dir/A1oDAEAPI/analyses-algorithms"
+
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		#TODO: Thsi should worktemp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		temp1=`sed -n '2p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$a_dem".m"
+	done
+fi 
+
+#--------- DAEAPI ------------------------------------
+
+if [ 0 == 1 ]; then
+	#mkdir $LocalMAPPDir"/Documentation/DAEAPI"
+	cp ./help/help_DAEAPI.txt $LocalMAPPDir"/Documentation/DAEAPI-help.m"
+	sed -i "s/^/%/g" $LocalMAPPDir"/Documentation/DAEAPI.m"
+
+	DAE_s="DAEs"
+	#mkdir $LocalMAPPDir"/Documentation/DAEAPI/"$DAE_s
+
+	# Add a line "Differential-Algebraic-Equations (DAEs)"
+	echo -e "%\n%Differential-Algebraic-Equations (DAEs)">>"$doc_dir/"$DAE_s".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "Differential-Algebraic-Equations (DAEs)"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$DAE_s".m"
+
+	# Folders in A1oDAEAPI which should be added to the help system
+	unset file_names
+	DAEAPI_dir="./DAEAPI"
+	DAE="$DAEAPI_dir/DAEs/" 
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${DAE} -name "*.m")
+
+	#mkdir "$doc_dir/DAEAPIoDAEAPI/analyses-algorithms"
+	unset temp
+	unset temp1
+	unset add_line
+
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$DAE_s".m"
+		wrap_n_indent $file  MAPPcircuitDAE #$a_algo
+	done
+
+
+
+
+	DAE_u="DAEAPI-utils"
+	#mkdir $LocalMAPPDir"/Documentation/DAEAPI/"$DAE_u
+	# Add a line "DAE Utils"
+	echo -e "%\n%DAE Utilities">>"$doc_dir/"$DAE_u".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "DAE Utilities"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$DAE_u".m"
+
+	# Folders in A1oDAEAPI which should be added to the help system
+	unset folder_name
+	unset file_names
+	DAEAPI_dir="./DAEAPI"
+	folder_name="$DAEAPI_dir/utils/" 
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${folder_name} -name "*.m")
+
+	#mkdir "$doc_dir/DAEAPIoDAEAPI/analyses-algorithms"
+	unset temp
+	unset temp1
+	unset add_line
+
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$DAE_u".m"
+	done
+
+	#------DAE Demo----------
+	DAE_demo="DAEAPI-test-scripts"
+	#mkdir $LocalMAPPDir"/Documentation/DAEAPI/"$DAE_demo
+	# Add a line "DAE Demos"
+	echo -e "%\n%DAE Demos">>"$doc_dir/"$DAE_demo".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "DAE Demos"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$DAE_demo".m"
+
+	# Folders in A1oDAEAPI which should be added to the help system
+	unset folder_name
+	unset file_names
+	DAEAPI_dir="./DAEAPI"
+	folder_name="$DAEAPI_dir/test-scripts/" 
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${folder_name} -name "*.m")
+
+	#mkdir "$doc_dir/DAEAPIoDAEAPI/analyses-algorithms"
+	unset temp
+	unset temp1
+	unset add_line
+
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$DAE_demo".m"
+	done
+
+fi
+
+#$LocalMAPPDir -mindepth 1 -maxdepth ${directory_depth} -type d) ; do #
+#TODO: Change ./MyLocalMAPP
+
+# --------------------MODSPEC -------------------
+
+if [ 0 == 1 ]; then # JR/ 2013/09/27
+	# start ModSpec
+	# mkdir $LocalMAPPDir"/Documentation/ModSpec"
+	cp ./help/help_ModSpec.txt $LocalMAPPDir"/Documentation/ModSpec_help.m"
+	sed -i "s/^/%/g" $LocalMAPPDir"/Documentation/ModSpec.m"
+	# Completed writing contents of help_ModSpec.txt
+fi
+
+# Add a line "Differential-Algebraic-Equations (DAEs)"
+Device_models="ModSpec-device-models"
+#mkdir $LocalMAPPDir"/Documentation/ModSpec/"$Device_models
+echo -e "%\n%Various Compact models represented in ModSpec API">>"$doc_dir/"$Device_models".m"
+count=1
+temp_line="%"
+#while [ $count -le `expr length "Device Models"` ] # does not port to OSX
+while [ $count -le `echo "Device Models" | awk '{print length}'` ]
+do
+        (( count++ ))
+        temp_line=${temp_line}"-"
+
+done
+echo -e "${temp_line}">>"$doc_dir/"$Device_models".m"
+
+# Folders in ModSpec which should be added to the help system
+ModSpec_dir="./ModSpec/ModSpec-MATLAB-API"
+i=1
+while read line
+do  
+        file_names[ $i ]="$line"    
+        (( i++ ))
+done < <( find ${ModSpec_dir} -maxdepth 1 -name "*.m")
+
+#mkdir "$doc_dir/DAEAPIoDAEAPI/analyses-algorithms"
+unset temp
+unset temp1
+unset add_line
+unset file
+for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+do
+        # echo "AMIT"
+        # echo "$file$"
+        add_line="%"`basename $file|sed 's/\..*$//'`
+        spaces="........................................................"
+        temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+        #printf "%s\n"   $add_line
+        temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+        # echo $temp
+        # JR: 2013/09/27 echo  ${temp}>>"$doc_dir/"$Device_models".m"
+        find_subfunction_comments "$file" #"$doc_dir/"$Device_models".m"
+done
+
+
+if [ 0 == 1 ]; then
+
+	# Add a line "Smoothing Functions"
+	smoothingf="smoothingfuncs"
+	#mkdir $LocalMAPPDir"/Documentation/ModSpec/"$smoothingf
+	echo -e "%\n% Various smoothing functions to smoothen model discontinuity and non-differentiability">>"$doc_dir/"$smoothingf".m"
+	count=1
+	temp_line="%"
+
+	# Folders in ModSpec which should be added to the help system
+	ModSpec_dir="./ModSpec/ModSpec-MATLAB-API"
+	SmoothingFunction="$ModSpec_dir/smoothingfuncs" 
+	unset file_names
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${SmoothingFunction} -name "*.m")
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$smoothingf".m"
+	done
+
+
+
+:<<'DO_IT_MANUALLY'
+	# Add a line "Test Data"
+	echo -e "%\n%ModSpec Test Data">>"$doc_dir/ModSpec/Contents.m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "ModSpec Test Data"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/ModSpec/Contents.m"
+
+	# Folders in ModSpec which should be added to the help system
+	ModSpec_dir="./ModSpec/ModSpec-MATLAB-API"
+	SmoothingFunction="$ModSpec_dir/test-data" 
+	unset file_names
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${SmoothingFunction} -name "*.m")
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		echo $temp
+		echo  ${temp}>>"$doc_dir/ModSpec/Contents.m"
+	done
+DO_IT_MANUALLY
+
+
+	# Add a line "Test Data"
+	ModSpec_demo="ModSpec-test-scripts"
+	#mkdir $LocalMAPPDir"/Documentation/ModSpec/"$ModSpec_demo
+	echo -e "%\n%ModSpec demo">>"$doc_dir/"$ModSpec_demo".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "ModSpec Verification"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$ModSpec_demo".m"
+
+	# Folders in ModSpec which should be added to the help system
+	ModSpec_dir="./ModSpec/ModSpec-MATLAB-API"
+	ModSpec_tests="$ModSpec_dir/test-scripts" 
+	unset file_names
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${ModSpec_tests} -name "*.m")
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$ModSpec_demo".m"
+	done
+
+
+	ModSpec_utils="ModSpec-utils"
+	#mkdir $LocalMAPPDir"/Documentation/ModSpec/"$ModSpec_utils
+	echo -e "%\n%ModSpec Utilities">>"$doc_dir/"$ModSpec_utils".m"
+
+	# Folders in ModSpec which should be added to the help system
+	ModSpec_dir="./ModSpec/ModSpec-MATLAB-API"
+	ModSpec_u="$ModSpec_dir/utils" 
+	unset file_names
+	i=1
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${ModSpec_u} -name "*.m")
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="........................................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		echo  ${temp}>>"$doc_dir/"$ModSpec_utils".m"
+	done
+
+fi
+
+
+# --------------------VECVALDER -------------------
+
+if [ 0 == 1 ]; then
+
+	# start vecvalder 
+	#mkdir $LocalMAPPDir"/Documentation/vv-package"
+	cp ./help/help_vecvalder.txt $LocalMAPPDir"/Documentation/vv-package.m"
+	sed -i "s/^/%/g" $LocalMAPPDir"/Documentation/vv-package.m"
+	# Completed writing contents of help_vecvalder.txt
+
+	vv_f="vecvalder-functions"
+	#mkdir $LocalMAPPDir"/Documentation/vv-package/"$vv_f
+	# Add a line "Differential-Algebraic-Equations (DAEs)"
+	echo -e "%\n%vecvalder functions">>"$doc_dir/"$vv_f".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "veccalder functions"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$vv_f".m"
+
+	# Folders in ModSpec which should be added to the help system
+	vv_dir="./vecvalder/@vecvalder"
+	i=1
+	unset file_names
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${vv_dir} -maxdepth 1 -name "*.m")
+
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="......................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$vv_f".m"
+	done
+
+	vv_dem="vecvalder-tests"
+	#mkdir $LocalMAPPDir"/Documentation/vv-package/"$vv_dem
+	# Add a line "vecvaler package demos"
+	echo -e "%\n%vv package demos">>"$doc_dir/"$vv_dem".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "vv package demos"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$vv_dem".m"
+
+	# Folders in ModSpec which should be added to the help system
+	vv_dir="./vecvalder/tests"
+	i=1
+	unset file_names
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${vv_dir} -maxdepth 1 -name "*.m")
+
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="......................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$vv_dem".m"
+	done
+
+	vv_u="vecvalder-utils"
+	#mkdir $LocalMAPPDir"/Documentation/vv-package/"$vv_u
+	# Add a line "vecvaler package utilities"
+	echo -e "%\n%vecvalder package utilities">>"$doc_dir/"$vv_u".m"
+	count=1
+	temp_line="%"
+	while [ $count -le `expr length "vv package utilities"` ]
+	do
+		(( count++ ))
+		temp_line=${temp_line}"-"
+
+	done
+	echo -e "${temp_line}">>"$doc_dir/"$vv_u".m"
+
+	# Folders in ModSpec which should be added to the help system
+	vv_dir="./vecvalder/utils"
+	i=1
+	unset file_names
+	while read line
+	do  
+		file_names[ $i ]="$line"    
+		(( i++ ))
+	done < <( find ${vv_dir} -maxdepth 1 -name "*.m")
+
+	unset temp
+	unset temp1
+	unset add_line
+	unset file
+	for file in ${file_names[@]} # ./DAEAPI/device-models/*.m #./$doc_dir/*.m
+	do
+		add_line="%"`basename $file|sed 's/\..*$//'`
+		spaces="......................................"
+		temp1=`sed -n '3p' $file|sed 's/^%*//'`        
+		#printf "%s\n"   $add_line
+		temp=`printf "%s %s %s\n"   $add_line ${spaces:${#add_line}} $temp1`;
+		# echo $temp
+		echo  ${temp}>>"$doc_dir/"$vv_u".m"
+	done
+
+fi

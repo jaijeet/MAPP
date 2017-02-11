@@ -1,0 +1,113 @@
+CYGWINPREFIX=@CYGWINPREFIX@
+VVTOP=`pwd`
+VVVERSION=@VVVERSION@
+VVINSTALLTOPDIR=$(CYGWINPREFIX)@prefix@
+	# WATCH OUT for terminating spaces in the above!
+VVINSTALLDIR=$(VVINSTALLTOPDIR)/lib/vecvalder
+VVBINDIR=$(VVINSTALLTOPDIR)/bin
+RELVERSIONCMD=`head -n 1 00-VERSION | sed -e 's/ /_/g'`
+RELVERSION="${RELVERSIONCMD}"
+RELVERSIONEXT="${RELVERSIONCMD}-release"
+TMPDIR=/var/tmp/
+
+all: ./utils/setuppaths_vecvalder.m pcode
+	@echo "Next step:"
+	@echo "	$$ make install # will install to $(VVINSTALLTOPDIR)"
+	@echo ""
+	@echo "  [To clean up:"
+	@echo "  	$$ make installclean # remove installation in $(VVINSTALLTOPDIR)"
+	@echo "  	$$ make autoclean # remove autoconf-generated files"
+	@echo "  	$$ make cleaneverything # do both of the above"
+	@echo "  ]"
+	@echo ""
+
+./utils/setuppaths_vecvalder.m: ./utils/setuppaths_vecvalder_template.m
+	@echo "creating $@";
+	@cat $< | sed -e 's#__VVINSTALLPATH__#$(VVINSTALLDIR)#g'  >| $@;
+	@
+
+pcode: ./utils/setuppaths_vecvalder.m
+	@ echo "pcode @vecvalder" | matlab -nodesktop -nosplash -nojvm
+	@ (cd tests; echo "pcode *.m" | matlab -nodesktop -nosplash -nojvm)
+	@ (cd utils; echo "pcode *.m" | matlab -nodesktop -nosplash -nojvm)
+
+makeVVINSTALLDIR: installclean
+	@ mkdir -p $(VVINSTALLDIR)
+	@ echo "created $(VVINSTALLDIR)"
+	@echo ""
+
+installsrc: makeVVINSTALLDIR 
+	@tar --exclude ".svn" -cf - ./00-VERSION ./0-README ./@vecvalder ./tests ./utils | (cd $(VVINSTALLDIR); tar xf -)
+	@chmod -R a+rX $(VVINSTALLDIR)
+	@echo "Done with (source) installation."
+	@echo ""
+	@echo "---------------------------------------------------------------"
+	@echo "To use vecvalder, start MATLAB and put $(VVINSTALLDIR)/utils/"
+	@echo "in its PATH:"
+	@echo '	> addpath '"$(VVINSTALLDIR)/utils"
+	@echo "or add $(VVINSTALLDIR)/utils to your MATLABPATH env. variable."
+	@echo '	> setuppaths_vecvalder;'
+	@echo '	> run_ALL_vecvalder_tests'
+	@echo ""
+	@echo "See $(VVINSTALLDIR)/0-README for more information."
+	@echo ""
+
+install: ./utils/setuppaths_vecvalder.m pcode makeVVINSTALLDIR 
+	@tar --exclude ".svn" -cf - ./00-VERSION ./0-README ./@vecvalder/*.p ./tests/*.p ./utils/*.p | (cd $(VVINSTALLDIR); tar xf -)
+	@chmod -R a+rX $(VVINSTALLDIR)
+	@echo "Done with (pcode) installation."
+	@echo ""
+	@echo "---------------------------------------------------------------"
+	@echo "To use vecvalder, start MATLAB and put $(VVINSTALLDIR)/utils/"
+	@echo "in its PATH:"
+	@echo '	> addpath '"$(VVINSTALLDIR)/utils"
+	@echo "or add $(VVINSTALLDIR)/utils to your MATLABPATH env. variable."
+	@echo '	> setuppaths_vecvalder;'
+	@echo '	> run_ALL_vecvalder_tests'
+	@echo ""
+	@echo "See $(VVINSTALLDIR)/0-README for more information."
+	@echo ""
+
+installclean:
+	@echo "removing $(VVINSTALLTOPDIR)..."
+	@rm -fr $(VVINSTALLTOPDIR)
+	@echo ""
+
+autoclean: 
+	@rm -fr ./configure config.status autom4te.cache config.log ./Makefile
+
+cleaneverything: clean installclean autoclean
+
+clean:
+	@rm -f utils/setuppaths_vecvalder.m
+	@ (cd @vecvalder; rm -f *.p)
+	@ (cd tests; rm -f *.p)
+	@ (cd utils; rm -f *.p)
+
+
+snapshot:
+	@echo "making snapshot ${RELVERSION}..."
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@ln -sT ${VVTOP} ${TMPDIR}/${RELVERSION}
+	@cd ${TMPDIR}/${RELVERSION}; if [ -e Makefile ]; then make -i autoclean; fi
+	@tar -C ${TMPDIR} --exclude "*.svn" -hzcvf "${TMPDIR}/${RELVERSION}".tgz "${RELVERSION}" > /dev/null
+	@echo ""
+	@rm -f ${TMPDIR}/${RELVERSION}
+	@echo vecvalder snapshot tarball ${TMPDIR}/${RELVERSION}.tgz created.
+	@echo ""
+
+release: install
+	@echo "making binary release ${RELVERSIONEXT}..."
+	@echo ""
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@mkdir ${TMPDIR}/${RELVERSIONEXT}
+	@tar -C ${VVINSTALLDIR}  -hcf - . | tar -C ${TMPDIR}/${RELVERSIONEXT} -xf - 
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}/utils
+	@rm -f ${TMPDIR}/${RELVERSIONEXT}.tgz
+	@tar -C ${TMPDIR} --exclude "*.svn" -hzcvf "${TMPDIR}/${RELVERSIONEXT}".tgz "${RELVERSIONEXT}" > /dev/null
+	@echo ""
+	@rm -fr ${TMPDIR}/${RELVERSIONEXT}
+	@echo vecvalder binary release tarball ${TMPDIR}/${RELVERSIONEXT}.tgz created.
+	@echo ""
+

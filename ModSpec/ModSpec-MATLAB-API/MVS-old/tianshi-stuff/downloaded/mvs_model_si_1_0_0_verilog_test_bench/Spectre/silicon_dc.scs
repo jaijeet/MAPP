@@ -1,0 +1,27 @@
+// Test-bench for silicon MVS model
+// simulates the dc I-V characteristics of the transistor
+// TESTED ON SPECTRE Version 10.1.1.374.isr21
+
+simulator lang=spectre 
+ahdl_include "mvs_si.va"
+format options rawfmt=psfascii
+
+parameters vgi = 0.4
+parameters vdi = 1.0
+M1 (drain gate source body) daa_mosfet tipe=1 W=1e-4 Lgdr=32e-7 dLg=9e-7 Cg=2.57e-6 beta=1.8 alpha=3.5 etov=1.3e-3 Cif=0 Cof=0 phib=1.2 gamma=0 mc=0.2 CTM_select=1 Rs0=100 Rd0=100 n0=1.68 nd=0.1 vxo=1.2e7 mu=200 Vt0=0.4 delta=0.15
+Vdrain (drain 0) vsource dc = vdi
+Vgate (gate 0) vsource dc = vgi
+Vsource (source 0) vsource dc = 0
+Vbody (body 0) vsource dc = 0
+
+dcsweep_drain dc param=vdi start=-1 stop=1 step=0.01 save=all 
+save M1:currents
+save M1:Qs
+save M1:Qd
+save M1:Qg
+save M1:Qb
+save M1:Id
+
+
+
+

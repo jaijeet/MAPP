@@ -1,0 +1,52 @@
+vecvalder-v0.012+delta-vecvalder-SVN-r40-tianshi
+
+-- Changelog
+
+v0.012+delta:
+   - FIXME/TODO: CROSS-PRODUCT AND TEST UPDATES by Tianshi: need to document!
+   - updated configure.ac to test for MATLAB and other basic programs
+   - cleaned up tests (replaced soft links by copies) and fixed install
+   - added log10 support
+   - added rdivide.m as a soft link to mrdivide.m
+   - updated inverterchain_DAEAPIv6->inverterchain_DAEAPIv6_old, run_ALL_tests
+   - subsasgn fix: vv(i:j) = double
+   - subsref fix: vv(:) and vv{:} access
+   - majorbug fix in subsasgn - subasgn written from scratch, without
+     using builtin subsasgn (which was causing big problems). Tested on
+     vsrc_xgate_resistor.
+   - added uniqIDs to DAEAPI calls in tests
+   - updated all soft links to relative ones
+   - added Parameters support to dfq_dp (test_DAEAPI_parmObj_inverterchain)
+   - added make release and make snapshot
+
+v0.012:
+   - Octave 3.4.3 compatibility changes: run_ALL_tests works in Octave
+     - added vecvalder.vertcat, otherwise Octave complains
+     - put in code to detect Octave in run_ALL_tests and to turn off
+       warnings, clear functions at the end of the script.
+     - added other files like uQSS.m, about the absence of which octave
+       complains.
+
+v0.011: snapshotted on 2011/10/19
+   - added make release to Makefile.in
+   - changed norm(...) to norm(full(...)) in all tests (fixing Arie's problem).
+   - improved quickstart help
+   - fixed get(); improved der2mat to produce sparse matrices
+   - cleaned up subsref code
+
+v0.01: snapshotted on 2011/10/18
+   - this is the initial snapshot with an assigned version
+     number. It has been verified on a number of tests (go to
+     the directory tests, start matlab and run run_ALL_tests).
+
+     It features support for several functions and operators beyond David's
+     version of early Oct, 2011; plus modifications of some of his original
+     routines.
+
+   - 2011/10/15-18: updates by JR
+     - added installation via autoconf
+     - 0-README-vecvalder (some basic documentation)
+     - added the directory tests/ with a few basic tests
+     - added subsref overloading
+
+   - 2011/09: initial revision, David Amsallem's code

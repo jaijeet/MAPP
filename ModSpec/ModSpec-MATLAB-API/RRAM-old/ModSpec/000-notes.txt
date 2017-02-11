@@ -1,0 +1,56 @@
+An RRAM is a two-terminal device with two I/Os: ipn and vpn. For a regular
+two-terminal resistor-like device, we should be able to write the model
+equation:
+
+    ipn = f(vpn).             (1)
+
+But for RRAM, there is another variable that affects ipn: the length of the
+filament in the dielectric (l), or the tunneling gap (gap), which is the
+distance between the tip of the filament and the opposite electrode.
+Since l+gap = tox, the thickness of the dielectric, here we only consider gap
+as the variable to model.
+
+Then the ipn equation becomes:
+
+    ipn = f1(vpn, gap).            (2)
+
+And gap satisfies a differential equation:
+
+    d/dt gap = f2(vpn, gap).       (3)
+
+If we figure out what f1 and f2 should be, the model is complete.
+
+------------------------------------------------------------------------------
+
+Let's look at f1 first.
+
+In the Stanford model:
+
+    f1(vpn, gap) = I0 * exp(-gap/g0) * sinh(vpn/V0),
+
+where I0=10, g0=0.25e-9, V0=0.25 are fitting parameters.
+
+In the UMich model:
+TODO: much more complicated...
+
+Q1: what's the difference?
+
+	TODO: use plot_ipn.m to compare the UMich formulation with the simple
+    Stanford one.
+
+------------------------------------------------------------------------------
+
+Let's look at f2.
+The problem with both Standford and UMich models is that f2 is not continuous,
+and apart from (3), gap should also satisfy:
+
+    gap_min <= gap <= gap_max.    (4)
+
+Both models define f2 only within the range in (4).
+
+Q2: what's the difference in f2?
+
+Q3: how to deal with the discontinuity?
+
+Q4: how to model (4)?
+------------------------------------------------------------------------------

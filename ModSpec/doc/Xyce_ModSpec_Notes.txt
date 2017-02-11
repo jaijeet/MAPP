@@ -1,0 +1,264 @@
+Current status (Aug 5, 2012):
+- N_DEV_ModSpec_Device.C is being worked on - (pseudo)code has been written
+- next steps:
+  - complete the pseudocode for jacStamp next in N_DEV_ModSpec_DeviceC and then go on to completing 
+    the whole file.
+  - put a test model as a .so file and make sure you can dlopen it.
+  - test out the ModSpec-specific code snippets in N_DEV_ModSpec_Device.C as a standalone file
+------------------------------------------------------------------------------------------------------
+
+What Xyce needs, and where:
+---
+At the high level:
+- difference between Model and Instance?
+  - most of the action seems to be in the Instance (at least for jrRLC)
+
+- first, we need to reserve a certain number of unknowns and equations for the device - where is this 
+  done? Also, the circuit engine needs to know how many sparse matrix nonzero entries it needs to reserve.
+  - this seems to happen in the Instance constructor:
+    - two specially named variables: numExtVars and numIntVars are set here. But SetNumNodes also needs
+      to be set in the parameters section of the Instance constructor - this probably refers to the 
+      number of nodes expected by the parser.
+      - numExtVars are the number of nodes/KCLs, including the reference node (MNA is assumed).
+      - numIntVars are all the internal unknowns (MNA is assumed), and the equations corresponding
+        to them.
+
+    - also, something called jacStamp is set up here, in a very simple manner, to provide information
+      about needed nonzero entries in the circuit Jacobian matrix:
+      - the eqns/unknowns are indexed sequentially up from 0; with the extVars first.
+      - jacStamp is double**; each row corresponds to an equation; each col within it contains
+         the _indices_ of the nonzeros.
+    - jacStamp is just a local data member; the functions called to access it
+      are Instance::DAEdQdxJacStamp and Instance::DAEdFdxJacStamp, which both return JacStamp.
+      You could in fact have different jacStamps for F and Q.
+
+- also, we need to inform the Xyce Instance about the ModSpec device's parameters. This is also done (like the above)
+  in the Instance constructor, using lines like:
+   - addPar ("R", 1000.0, false, NO_DEP, // JR: all these are instance line parameters
+     static_cast<double N_DEV_DeviceEntity:: *> (&N_DEV_ModSpec_DeviceInstance::R),  // JR: which class member to set for this parameter
+     NULL, U_OHM, CAT_NONE, "Resistance");
+   - The addPar calls are defined in N_DEV_DeviceEntity.C; they are defined for int, double, bool and string second arguments,
+     so the type is automatically registered correctly.
+   - addPar seems to be a powerful facility that serves several purposes:
+     - it registers the parser-name of the parameter (eg, "R"), its type, legal values, etc., so the parser
+       knows how to read values of the parameter from the SPICE input file
+     - it sets the default value (as above) - that's how the addPar call knows the type of the value.
+     - most importantly, it registers the class variables (eg, N_DEV_ModSpec_DeviceInstance::R) where the current parameter is stored.
+       subsequent to the addPar calls, setDefaultParms() and setParms() set these variables, which can then be used
+       by the device's functions.
+   - to register and use ModSpec parameters in Xyce, we will need to do the following:
+     - 1. have vectors of different types as members of the Instance class to store the vectors.
+          Eg, vector<double> doubleParms, vector<string> stringParms, vector<int> intParms, boolParms, etc.. 
+	  Ie, one for each type supported by untyped
+     - 2. have a setup function that goes through the ModSpec parameters, finds out their type (using the internal type of untyped),
+          and assigns an element of one of the above vectors to them in the addPar call.
+     - 3. Xyce/parser deals with setting up values in doubleParms, intParms, etc., thereafter.
+     - 4. after setParms() has been called, call another function that sets up vector<untyped> parms from doubleParms, etc.,
+          and then call ModSpec::setParms(parms). All this can be done in the XyceInstance constructor, since parameter
+	  values don't change during simulation.
+
+- Then, using the above, the circuit engine does its stuff and reserves vectors/matrices for the entire system. 
+
+- Then, the device needs to access relevant entries of unknown/F/Q vectors, and the relevant
+  sparse matrix entries. This is done by setting up indices called LIDs, and deriving pointers
+  into the matrix from them.
+  - someone calls Instance::RegisterLIDs, passing as arguments the LIDs for the device, which
+    are stored internally within the Instance object.
+      - the LIDs are just indices, they are not pointers:
+        - the argument extLIDVecRef provides LIDs for the node unknowns (and KCLs)
+        - the argument intLIDvecRef provides LIDs of the internal unknowns. The equations
+	  they contribute uses the same LID.
+        - these indices are used by Instance::setupPointers to set up the Jacobian Matrix's pointers,
+          kept internally.
+    - for the ModSpec device, we just store extLIDVec and intLIDvec within the instance.
+  - registerJacLIDs doesn't need to be changed
+  - Instance::setupPointers() uses these LIDs to set up the actual pointers to Jacobian matrix entries.
+    - N_LAS_Matrix * dFdxMatPtr = extData.dFdxMatrixPtr and N_LAS_Matrix * dQdxMatPtr = extData.dQdxMatrixPtr
+      provide access to the system's dFdx and dQdx matrices.
+    - eg, double* Jentryptr = dFdxMatPtr->returnRawEntryPointer(eqn_LID, unk_LID) provides access to the entry 
+      for (eqn, unk)
+    - for the ModSpec device, we set up sparse matrices of double pointers (dFdxMat_ptrs and dQdxMat_ptrs)
+      - see setupPointers() in N_DEV_ModSpec_Device.C
+      - these are meant to be used in the following way (refer jacStamp_f and jacStamp_q in test_nExtvars_nIntvars_jacStamp_MNA.C):
+        - for every (i,j) such that jacStamp_f/q(i,j) is nonzero, dF/QdxMat_ptrs(i,j) has a nonzero entry containing
+	  a pointer to the corresponding equation/unknown in the system matrix.
+  - THERE DO NOT APPEAR TO BE POINTERS KEPT for the RHS F/Q. Maybe these are entered through
+    direct use of the LIDs - yes, this is done in loadDAEFVectorBlock and loadDAEQVectorBlock.
+
+- the above is all setup; it is done once when the instance is allocated. When the device is evaluated,
+  several routines are called: one to compute the device's functions and Jacobian entries, and others
+  to put these into the system F/Q vectors and the system Jacobian matrix:
+
+- the real work of device evaluation is done in Instance::updateIntermediateVarsBlock()
+  - by tradition, this is where the device code actually is kept and executed.
+  - access to the unknown vector is through the pointer double* xptr = extData.nextSolVectorRawPtr().
+    - xptr[unk_LID] accesses the value of unk
+  - F/Q rhs values, as well as derivatives, are calculated here and stored in the device object.
+  - they are NOT written yet into the system RHS vectors and the system Jacobian.
+  - the function that is actually called from outside is not updateIntermediateVarsBlock(), but
+    updatePrimaryStateBlock(). This simply calls updatePrimaryStateBlock().
+  - there's also an updateSecondaryStateBlock(), which currently does nothing. Possibly this is
+    used for limiting and other things.
+  - for ModSpec, the code for setting up jacStamp has been copied and modified  - see N_DEV_ModSpec_Device.C
+
+- writing to the system's F RHS vector is done by loadDAEFVectorBlock()
+  - the system F vector is accessed via double* Fptr = daeFVectorRawPtr();
+    - a particular equation's entry is obtained via Fptr[eqn_LID].
+    - the stored quantities from updateIntermediateVarsBlock() are simply picked
+      up and written to Fptr.
+  - ModSpec: the code is written, see see N_DEV_ModSpec_Device.C
+
+- writing to the system's Q RHS vector is done by loadDAEQVectorBlock()
+  - in exactly the same way as loadDAEFVectorBlock()
+  - ModSpec: the code is written, see see N_DEV_ModSpec_Device.C
+
+- Writing to the dFdx Jacobian is done by loadDAEdFdxBlock()
+  - the pointers from setupPointers() are used here to directly access the
+    relevant entries of the system's dFdx Jacobian.
+  - ModSpec: the code is written, see see N_DEV_ModSpec_Device.C
+
+- Writing to the dQdx Jacobian is done by loadDAEdQdxBlock()
+  - exactly like loadDAEdFdxBlock
+  - ModSpec: the code is written, see see N_DEV_ModSpec_Device.C
+
+--------
+Details:
+--------
+
+- setting up a local stamp "matrix" jacStamp - used to allocate memory for the system and set up the Jacobian pointers
+  - maybe one each for f and q?
+
+  - we need to first decide on the unknown and equation orders for the device in Xyce
+    - unknown order: 
+      - first (Xyce requirement), n+1 node voltages, in the same order as NIL_NodeNames
+        - call these vecE
+      	- these are used:
+	  - for setting up the voltage otherIOs (members of vecX): each voltage otherIO = e_itsNode - e_refNode
+	  - in the KVL equations for the voltage ExplicitOutputs: each such equation is of the form
+	    e_itsNode - e_refNode - vecZ_k(vecX, vecY, vecU) = 0.
+     - next, n-l+l_v current unknowns from the OtherIOs
+        - call these vecI
+        - these are used:
+	  - for setting up the current otherIOs (members of vecX)
+	  - in the appropriate node KCLs: KCL_itsNode += the_current_unknown; KCL_refNode -= the_current_unknown
+      - next, m internal unknowns, in the same order as InternalUnkNames
+        - these are simply vecY.
+    - equation order:
+      - first (Xyce requirement), n+1 node KCLs, in the same order as NIL_NodeNames
+        - call these KCLs
+        - each current ExplicitOutput contributes: KCL_itsNode += vecZ_k(vecX, vecY, vecU); KCL_refNode -= vecZ_k(vecX, vecY, vecU)
+	- each current otherIO contributes: KCL_itsNode += the_current_unknown=vecX_k; KCL_refNode -= the_current_unknown=vecX_k
+	- and that's it? vecW is not involved in these equations
+      - next, l_v KVL equations for the voltage ExplicitOutputs
+        - call these KVLs
+	- for each such voltage ExplicitOutput, we have the equation e_itsNode - e_refNode - vecZ_k(vecX, vecY, vecU) = 0.
+      - next, n-l+m ImplicitEquations
+        - these are just vecW(vecX, vecY, vecZ), unchanged
+   - the Xyce-level unknowns are:  [vecE;   vecI;   vecY]
+                           sizes    n+1    n-l+l_v   m
+   - the Xyce-level equations are: [KCLs;  KVLs;    vecW]
+                           sizes    n+1    l_v     n-l+m
+   - therefore, Xyce's jacStamp has the following form:
+	//	            vecE            vecI            vecY
+	//	            (n+1)          (n-l+l_v)         (m)
+	//	        ---------------------------------------------
+	// KCLs (n+1)   | dKCLs_dvecE     dKCLs_dvecI     dKCLs_dvecY
+	// KVLs (l_v)   | dKVLs_dvecE     dKVLs_dvecI     dKVLs_dvecY
+	// vecW (n-l+m) | dvecW_dvecE     dvecW_dvecI     dvecW_dvecY
+	//
+
+   - vecX being a vector of branch voltages and currents, it is a simple function of vecE (node voltages) and vecI (the branch currents):
+     - vecX = A_E * vecE + A_I * vecI
+       - A_E is the node-to-branch incidence matrix. The only nonzero rows of A_E are those corresponding to voltage otherIOs
+       - some rows of A_I contain a single 1; others are all zero. The only nonzero rows of A_I are those corresponding to current otherIOs.
+     - dvecX_dvecE = A_E;
+     - dvecX_dvecI = A_I;
+
+   - the KCLs can be expressed simply in terms of vecZ and vecX:
+     - KCLs +=  A_Zi * vecZ(vecX, vecY, vecU) + A_Xi * vecX
+       - A_Zi: each column of A_Zi corresponding to a branch current ExplicitOutput has a 1 for the row corresponding
+         to its node, and a -1 for the reference node. Columns corresponding to voltage ExplicitOutputs
+	 are identically zero.
+       - A_Xi: each column of A_Xi corresponding to a branch current otherIO has a 1 for the row corresponding
+         to its node, and a -1 for the reference node. Columns corresponding to branch voltage otherIOs
+	 are identically zero.
+
+   - the KVLs can be expressed simply in terms of vecE and vecZ:
+     - KVLs = A_Xv * vecE + A_Zv * vecZ(vecX, vecY, vecU);
+       - A_Xv: each row of A_Xv (there are l_v of them) corresponds to a voltage ExplicitOutput.
+       	       there should be a 1 in the column corresponding to its node, and a -1 in the col
+	       corresponding to refNode.
+       - A_Zv: each row of A_Zv should have a single -1, corresponding to the location of the voltage
+       	       ExplicitOutput in vecZ.
+    
+   - we can put the above together to get expressions for the 9 components of jacStamp:
+
+     - KCLs += A_Xi * vecX + A_Zi * vecZ(vecX, vecY, vecU) 
+       - dKCLs_dvecE += A_Xi * dvecX_dvecE + A_Zi * dvecZ_dvecX * dvecX_dvecE = A_Xi * A_E + A_Zi * dvecZ_dvecX * A_E
+         - (vecY, vecU do not depend on vecE)
+       - dKCLs_dvecI += A_Xi * dvecX_dvecI + A_Zi * dvecZ_dvecX * dvecX_dvecI = A_Xi * A_I + A_Zi * dvecZ_dvecX * A_I
+         - (vecY, vecU do not depend on vecI)
+       - dKCLs_dvecY += A_Zi * dvecZ_dvecY
+
+     - KVLs = A_Xv * vecE + A_Zv * vecZ(vecX, vecY, vecU);
+       - dKVLs_dvecE = A_Xv + A_Zv * dvecZ_dvecX * dvecX_dvecE = A_Xv + A_Zv * dvecZ_dvecX * A_E
+       - dKVLs_dvecI = A_Zv * dvecZ_dvecX * dvecX_dvecI = A_Zv * dvecZ_dvecX * A_I
+       - dKVLs_dvecY = A_Zv * dvecZ_dvecY
+
+     - vecW(vecX, vecY, vecU)
+       - dvecW_dvecE = dvecW_dvecX * dvecX_dvecE = dvecW_dvecX * A_E
+       - dvecW_dvecI = dvecW_dvecX * dvecX_dvecI = dvecW_dvecX * A_I
+       - dvecW_dvecY = dvecW_dvecY
+
+- So once the above A_* matrices are set up and stored in Xyce, we can set up the Jacobian
+  stamps, and the Jacobians themselves, quite easily using ModSpec functions.
+
+------------------------------------------------------------------------------------------------------
+ModSpec routines that need to be called:
+
+- recap of the ModSpec interface
+  - NIL.NodeNames obviously corresponds to Xyce's numExtVars (n+1)
+    - IOnames is simply all the branch voltages and all the branch currents (2n)
+      - n currents and n voltages
+
+      - ExplicitOutputs (vecZ) is a subset of IOnames, l (upto n) of them
+        - (since MNA is hardcoded in Xyce)
+	  - if an ExplicitOutput is a current, then no additional unknown is needed; it will
+	    contribute to the KCLs of its node and the reference node.
+	  - if an ExplicitOutput is a voltage (suppose there are l_v <= l of them), then:
+	    - we need to add an equation for its KVL: e_its_node - e_ref_node - value = 0
+	      - so we have l_v KVL equations contributed here
+	    - do we need to add a current unknown here? probably not.
+
+      - the IOnames that are not ExplicitOutputs are the otherIOs: 2n - l of them
+        - given MNA
+	  - for those that are voltages (n-l_v of them), you don't need to do anything special;
+	    - just subtract the corresponding node voltages to get it (ie, set up the appropriate
+	      parts of vecX).
+	  - for those that are currents (n-(l-l_v) of them) , you do need to:
+	    - add the current to Xyce's internal unknown list
+	      - so: n-l+l_v unknowns added
+	    - add/subtract the current to the corresponding node KCLs
+	    - get the current from the unknown vector to fill up vecX.
+
+       - so the above contributes:
+         - n-l+l_v Xyce-internal unknowns
+	 - l_v Xyce-internal equations
+
+    - InternalUnknames are the names of internal unknowns (there are m of these)
+      - just need to add the to Xyce's internal unk list - m of them
+      - and to extract them from the unknown vector to fill up vecY
+
+    - ImplicitEquationNames: there are n-l+m of these
+      - Xyce expects its number of non-KCL equations to be exactly equal to the number of 
+        its internal unknowns. Doing a tally of Xyce-internal unknowns and equations:
+	- Xyce-internal unknowns
+	  - n-l+l_v current unknowns from the OtherIOs
+	  - m internal unknowns from the InternalUnkNames
+	  - total: n+m-l+l_v unknowns
+	- Xyce-internal equations
+	  - l_v KVL equations for the voltage ExplicitOutputs
+	  - n-l+m equations from ImplicitEquations
+	  - total: n+m-l+l_v equations
+      - In other words, they match. Does it matter in what order we put the unknowns and the equations?
+

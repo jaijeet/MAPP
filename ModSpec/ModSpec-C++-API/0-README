@@ -1,0 +1,95 @@
+----------------------------------------------------------------------
+old Quickstart (superceded by ./0-how-to-compile-the-ModSpec-C++-API,
+read that first):
+
+- edit the Makefile, change TRILINC and TRILLDFLAGS to suit.
+- make
+- for i in *.so; do 
+	echo $i; 
+	./test_ModSpec_Element_using_dlopen ./$i; 
+	echo "==============================================="; 
+  done
+- cd tests-for-Xyce
+- make
+- for i in ../*.so; do 
+	echo $i; 
+	./test_nExtvars_nIntvars_jacStamp_MNA ./$i; 
+	echo "==============================================="; 
+  done
+- for i in ../*.so; do
+	echo $i;
+	./test_parameter_register_get ./$i;
+	echo "===============================================";
+  done
+
+-------------------------------------------------------------------------------
+Notes
+-------------------------------------------------------------------------------
+Nov 6, 2012:
+- see notes in ./tests-for-Xyce/Xyce_ModSpec_Notes.txt
+
+Oct 31, 2012:
+- Xyce-5.3 (under uchchhe:/miscspace/XyceSVN/) compiles, but not with jrres
+  - fixed: the problem was that N_DEV_DeviceBld.C was not modified, this seems 
+    new in Xyce-5.3
+
+as of Aug 10, 2012:
+- code that sets up jacStamps for Xyce is working
+  - BUT CORRECTNESS NOT VERIFIED YET
+- Quickstart: make (creates test_ModSpec_Element_using_dlopen, and
+  shared libraries {Res,RLC,RLC2}_ModSpec_Element.so)
+  - run simple tests:
+    - ./test_ModSpec_Element_using_dlopen ./Res_ModSpec_Element.so
+    - ./test_ModSpec_Element_using_dlopen ./RLC_ModSpec_Element.so
+    - ./test_ModSpec_Element_using_dlopen ./RLC2_ModSpec_Element.so
+  - then cd tests-for-Xyce, make, and run:
+    - test_nExtvars_nIntvars_jacStamp_MNA../<Res/RLC/etc>_ModSpec_Element.so
+
+as of Aug 7, 2012
+- everything is working nicely with dlopen
+- make will now create test_ModSpec_Element_using_dlopen, and
+  shared libraries Res_ModSpec_Element.so and RLC_ModSpec_Element.so
+  - run simple tests on them via:
+    - ./test_ModSpec_Element_using_dlopen ./Res_ModSpec_Element.so
+    - ./test_ModSpec_Element_using_dlopen ./RLC_ModSpec_Element.so
+  - then cd tests-for-Xyce, make, and run:
+    - test_nExtVars_nIntvars ../<Res/RLC/etc>_ModSpec_Element.so
+
+as of Aug 5, 2012
+- there is a preliminary version of Res_ModSpec that is working
+  - make test-Res_ModSpec_Element will do the job
+  - this uses untyped.h, which uses eString.h
+
+- Res_ModSpec_Element is now accessible generically via dlopen()
+  - make test-Res_ModSpec_Element_two will create a shared library
+    and link to it, but does not use dlopen
+
+  - using dlopen to access C++ classes is not as simple as 
+    using it for accessing C functions. But there is a nice tutorial
+    on how to do so, available at: http://www.isotton.com/devel/docs/C++-dlopen-mini-HOWTO/C++-dlopen-mini-HOWTO.html
+
+  - in order to use dlopen for C++ classes, the way Res_ModSpec_Element.h is now has to be changed
+    - most of it needs to be moved into ModSpec_Element.h
+    - this was originally tried in new_expts, and resulted in considerable simplification:
+      - none of the classes or functions in ModSpec_Element.h is templatized
+      - the derived class Res_ModSpec_Element, has a templatized fqei_tmpl function, and a templatized
+        dfqei_dXYU function. All the other functions call this.
+      - this makes the code much simpler than before, and it works fine.
+    - but pretty much ALL the code except for fqei_tmpl is generic - it should be moved up
+      to the ModSpec_Element classes
+      - but the trouble is that C++ does not support inheritance of virtual templatized functions:
+        (from http://stackoverflow.com/questions/2354210/can-a-member-function-template-be-virtual )
+	"""
+        Templates are all about the compiler generating code at compile-time. Virtual functions are all about the run-time system
+	figuring out which function to call at run-time.
+
+	Once the run-time system figured out it would need to call a templatized virtual function, compilation is all done and the
+	compiler cannot generate the appropriate instance anymore. Therefor, you cannot have virtual member function templates.
+
+	However, there are a few powerful and interesting techniques stemming from combining polymorphism and templates, notably
+	so-called type erasure.
+	"""
+    - the above problem has been worked around by using a #include to include all the functions that don't change
+      from device to device. It all works nicely and there is no code repetition.
+
+- next TODOs:

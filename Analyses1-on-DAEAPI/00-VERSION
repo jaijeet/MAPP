@@ -1,0 +1,150 @@
+Analyses1-on-DAEAPI-v1.1--Analyses1-on-DAEAPI-SVN-r11-jr
+
+-- Changelog
+
+%%%%%%%%%%%%%%%%  Begin Analyses1-on-DAEAPI changelog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Analyses1-on-DAEAPI-v1.1 (state on initial commit after split from old Analyses-on-DAEAPI-v1.0, content eqvt to 
+%			    old Analyses-on-DAEAPI SVN r6):
+%
+% Analyses-on-DAEAPI-v1.0 (state on initial commit after split from old DAEAPI, content eqvt to old DAEAPI SVN r32):
+%	- TODO: modify DAEAPI/NR/LMS/etc to support [out, success] = f/q/dfdx/dqdx
+%	- TODO: make LMS use NRinitGuess; otherwise it fails on BJTdiffpair unless IC carefully chosen
+%	- TODO: add DAE.TRANinitcond and use it in LMS, etc..
+%	- TODO: add proper parameter variability support (using vecvalder, possibly)
+%	- TODO: write a script that will crawl all the .m files and automatically produce help files with 
+%		the comments from each function. Eg, Shooting.Shooting, Shooting.SHOOTsolve (or Shooting.solve, 
+%		you can put this name in the comments under Shooting.SHOOTsolve).
+%		And also produce a master help indexing these helps, eg:
+%		analyses-algorithms:
+%			QSS:
+%				QSS.QSS
+%				QSS.solve
+%			Shooting:
+%				Shooting.Shooting
+%				Shooting.solve
+%		usability-helpers:
+%	- TOFIX: 2012/05/25: Octave support broken because NR gJ update uses nargout(funcname),
+%		which is not supported properly yet in Octave
+%	- MAJOR UPDATE TODO: generalize DAEAPI and all analyses that use q() to support
+%		Jq(x,u)*d/dt[x(t)] + d/dt[q(x,u)]
+%		- this is needed for LTV adjoints and for generality (eg, to support capacitance-based models)
+%		- see notes in [xournal-notes]/2012-05-26-Note-11-13--LTVDAEwAdjointAndTimeFlippingCapability.xoj
+%	- MAJOR UPDATE TODO: move DAEAPI to a single call fqJfxuJqx for calculating all DAE functions
+%		f, df_dx, df_du, q, dq_dx. This is for efficiency, especially for larger semiconductor models.
+%		- all algorithms need updates to use fqJfxuJqx if available. (f/q/df_dx/df_du/dq_dx will be
+%		  retained as separate function calls, but implemented via fqJfxuJqx).
+%		- MNAeqnEngine and RREeqnEngine will need updates to provide this. MNAeqnEngine will need
+%		  ModSpec updates (see ModSpec TODOs) to support this.
+%	- TODO: implement DCT-based HB (no complex numbers).
+%	- TODO: put in diagonal scaling of unknowns and equations within NR convergence criteria
+%		- important for oscillator HB
+%	- TODO: add phase condition options to HB and shooting
+%	  - may be important for convergence in problematic cases.
+%	- TODO: Mammalian circadian, SCN models; AVN model, etc.
+%	- TODO: figure out why shooting and HB give such wildly different results both for the nonlinear steady
+%		state and the PPV. Eg, on SoloveichikABCoscStabilized_w_inputs, where the osc. frequency is almost
+%		a factor of 2 off, and PPV magnitudes are a factor of 10 off.
+%	- [TODO (for DAEAPI mostly): figure out why MNA_EqnEngine and MNA_EqnEngine_older are behaving differently on DAAV6
+%		test_DAAV6_updown_asymm_ringosc_transient_HB_PPV.m -- see comments at the end of DAAV6_updown_asymm_ringosc.m.
+%		Could HB flakiness be due to the use of A\b for minimum-norm solution?
+%         ]
+%	- Added BSIM3_ringosc and a transient test.
+%	- Adlerize.m implemented, test added (test_shooting_PPV_Adlerize_threeStageRingOsc.m)
+%	- run_ALL updated to use matlabpool and parfor.
+%	- 2-SHIL-based bitflip code (SHIL_bit_flip_transient.m) now working.
+%	- PPV: TD (monodromy and MLS, based on shooting) and FD (based on HB) code in and working.
+%	  - as part of this, ddt_TD added, FD_from_periodic_TD
+%	- LMSforTabulatedLTV updated to solve the adjoint system.
+%	- shooting now uses relative T.
+%	- oscHB now uses relative frequencies - crucial for convergence, especially when using MLS solutions.
+%	- added RRE_EqnEngine, Soloveichik_ABC_oscillator and related tests
+%	- added MNA_EqnEngine and several related tests
+%	- made LMS a bit more modular, by adding LMSmethods.m that contains all the methods
+%	- added BJTschmittTrigger example, in prep for homotopy
+%
+% STUFF BELOW IS THE CHANGELOG OF THE OLD DAEAPI, which included Analyses.
+% -----------------------------------------------------------------------
+%
+% daeAPIv6.2: changes from v6.1
+%	- moved getparms, setparms, {,set_}u{QSS,LTISSS,transient} out of DAE files into separate files in utils/
+%	- added noise support (direct/adjoint LTInoise working on RCline; updated noise fn template for other DAEs)
+%	- added simple NR-based timestep control to LMS.
+%	- added df_du(...) when DAE.f_takes_inputs == 1
+%
+% daeAPIv6.1: changes from v6
+%	- NR limiting support added: NRlimiting(...)
+%	- QSSinitGuess(DAE) updated to QSSinitGuess(u, DAE)
+%	- setparms() and getparms() improved to take parameter names/vals as args
+%	- B(x, DAE), C(x, DAE) and D(x, DAE) reverted to  B(DAE), C(DAE) and D(DAE)
+%		- because we don't have tensor support yet; and we need tensor
+%		  support for d/dx B(x) - which we need for df_dx
+%
+% daeAPIv6: changes from v5
+% - support for qdot(x) + f(x,B*u(t)) = 0 (ie, b(t) included in f)
+%	- by setting the flag DAE.f_takes_inputs
+%	- f(x) is replaced by f(x, b), with b=B*utransient(t) implemented in LMS.m
+%	- similarly, df_dx(x) is replaced by df_dx(x, b) 
+%
+%
+% daeAPIv5: changes from v4
+% - input and output support (for MOR)
+%   - the DAE I/O system now is:
+% 	qdot(x,parms) + f(x,parms) + B(x,parms)*u(t) + M(x,parms)*n(t,parms) = 0
+%	system outputs y: y(t) = C(x,parms)^T x(t) + D(x,parms) u(t)
+%     - but (because we need tensors), no support yet for x, parms dependences
+%	of B, C, D.
+%   - new functions:
+%	- B = DAE.B(DAE); no support yet for DAE.B(x,DAE)
+%	- dBdx = DAE.dB_dx(x,DAE) - no support yet
+%	- dBdp = DAE.dB_dp(x,DAE) - no support yet
+%	- C = DAE.C(DAE); no support yet for DAE.C(x,DAE)
+%	- dCdx = DAE.dC_dx(x,DAE) - no support yet
+%	- dCdp = DAE.dC_dp(x,DAE) - no support yet
+%	- D = DAE.D(DAE); no support yet for DAE.D(x,DAE)
+%	- dDdx = DAE.dD_dx(x,DAE) - no support yet
+%	- dDdp = DAE.dD_dp(x,DAE) - no support yet
+%	- p = DAE.ninputs(DAE)
+%	- q = DAE.noutputs(DAE)
+%	- DAE = DAE.set_utransient(utfunc, utargs, DAE);
+%		- utfunc(t, utargs)
+%	- DAE = DAE.set_uQSS(uval, DAE);
+%	- DAE = DAE.set_uLTISSS(Uffunc, Ufargs, DAE);
+%		- Uffunc(f, Ufargs)
+%	- out = DAE.utransient(t, DAE) % must vectorized wrt t
+%	- out = DAE.uQSS(DAE)
+%	- out = DAE.uLTISSS(f, DAE) % must vectorized wrt f
+%	- out = DAE.inputnames(DAE)
+%	- out = DAE.outputnames(DAE)
+%   - changed:
+%	- DAE.QSSinitGuess: argument btQSS removed
+%	- separate object Outputs is now called StateOutputs
+%	- need to update QSS, LTISSS, etc. to do something sensible with
+%	  system outputs y
+%   - removed:
+%	- b, bQSS, bLTISSS, dbtransient_dp, dbQSS_dp have been removed. All 
+%		analyses need to be updated accordingly
+% %%%%%%
+%
+% daeAPIv4: changes from daeAPIv3: 
+% - argument parms is no longer used for f, q, b and related functions.
+%	it is picked up from within DAE.
+% - support for specialized b(t) inputs for different analyses
+%   - QSS; transient; LTISSS; noise
+% - NR init guess support
+% - support for parameter variability
+%   - makes use of Parameters object
+%   - now has setparms/getparms functions
+% - support for noise analysis
+% - other small cleanups (eg, ensuring df/dq return sparse matrices).
+% 
+%%%%%%%%%%%%%%%% end DAEAPI changelog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Type "help MAPPlicense" at the MATLAB/Octave prompt to see the license      %
+%% for this software.                                                          %
+%% Copyright (C) 2008-2013 Jaijeet Roychowdhury <jr@berkeley.edu>. All rights  %
+%% reserved.                                                                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+

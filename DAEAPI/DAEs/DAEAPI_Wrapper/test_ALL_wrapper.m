@@ -1,0 +1,15 @@
+clear all; close all;
+test_BJTdiffpair_wrapper;
+clear all; close all;
+test_BJTdiffpair_wrapper_with_fq;
+clear all; close all;
+test_parallelRLCdiode_wrapper;
+clear all; close all;
+test_parallelRLC_wrapper;
+clear all; close all;
+test_RCline_wrapper;
+clear all; close all;
+test_tworeactionchain_wrapper_transient;
+clear all; close all;
+test_parallelRLCdiode_pnjlim_wrapper;
+clear all; close all;

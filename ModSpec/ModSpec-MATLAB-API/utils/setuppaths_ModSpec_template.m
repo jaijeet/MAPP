@@ -1,0 +1,18 @@
+% add ModSpec paths
+% add ModSpec paths
+% add ModSpec paths
+MODSPECMATLABAPIDIR='__MODSPECMATLABAPIDIR__';
+MODSPECUTILS=sprintf('%s/utils', MODSPECMATLABAPIDIR);
+MODSPECTESTS=sprintf('%s/test-scripts', MODSPECMATLABAPIDIR);
+SMOOTHINGFUNCS=sprintf('%s/smoothingfuncs', MODSPECMATLABAPIDIR);
+addpath(MODSPECMATLABAPIDIR);
+addpath(MODSPECTESTS);
+addpath(MODSPECUTILS);
+addpath(SMOOTHINGFUNCS);
+
+VECVALDERINSTALLDIR='__VECVALDERINSTALLDIR__';
+VVUTILS=sprintf('%s/lib/vecvalder/utils', VECVALDERINSTALLDIR);
+addpath(VVUTILS);
+setuppaths_vecvalder;
+%DO_NOT_INCLUDE_IN_HELP
+

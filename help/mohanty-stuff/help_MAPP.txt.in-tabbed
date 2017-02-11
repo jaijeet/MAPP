@@ -1,0 +1,290 @@
+
+This is '@THEVERSION@', the Berkeley Model and Algorithm Prototyping Platform.
+
+1. Using MAPP help system 
+-------------------------- 
+The MAPP help system (this) can be invoked with "help MAPP" command.  This
+lists all the help topics available with MAPP help system. To get more detailed
+help on a particular topic that is listed in this help text, please type "help
+name-of-the-topic" after MATLAB prompt. For example, if you want to get more
+detailed help about analysis algorithms available under MAPP/A1oDAEAPI, type
+"help analyses-algorithm".
+
+
+MAPP_quickstart      - This script guides users new to MAPP through a
+                       step-by-step process to perform transient analysis on an
+                       RC circuit in MAPP framework. Type "MAPP_quickstart"
+                       (without quotes) to run this interactive quickstart
+                       guide.  (TODO: We could add other circuit examples with
+                       different analysis as well) 
+
+Examples and demos: 
+------------------- 
+You can directly run following examples and demos which demonstrate various
+analysis performed on different circuit DAEs. For example to do "AC analysis of
+a full wave rectifier circuit", type "run_fullWaveRectifier_AC" (without
+quotes). To get more detailed information about the script
+"run_fullWaveRectifier_AC", type "help run_fullWaveRectifier_AC" (without
+quotes)
+
+run_fullWaveRectifier_DCsweep          - DC sweep on a full wave rectifier
+                                         circuit 
+run_fullWaveRectifier_AC               - AC analysis of a full wave rectifier
+                                         circuit 
+run_fullWaveRectifier_transient        - Transient analysis on a full wave
+                                         rectifier circuit 
+run_inverter_DCsweep                   - DC sweep on an inverter circuit using
+                                         Shichmann-Hodges (SH) model 
+run_inverter_transient                 - Transient analysis on an inverter
+                                         circuit using SH model
+run_BJTdiffpair_DCsweep                - DC sweep on a differential pair using
+                                         Ebers-Moll (EM) BJTs 
+run_BJTdiffpair_AC                     - Run AC analysis on a differential pair
+                                         using EM BJTs 
+run_BJTschmittTrigger_transient        - Run transient simulation on a BJT
+                                         Schmitt trigger circuit
+run_inverterchain_transient            - Transient simulation on an inverter
+                                         chain using SH CMOS model
+
+For more examples, type >>" help  analyses-test-scripts" (without quotes).
+
+For some examples with detailed explanation of various steps, run the following
+examples:
+
+EXAMPLE 1: Transient analysis on a BJT differential pair using Backward
+           Euler method
+
+  % Creates BJT differential pair circuit DAE in MATLAB workspace
+    DAE = BJTdiffpair_DAEAPIv6(); 
+
+  % Set transient input to the DAE
+    utargs.A = 0.2; utargs.f=1e2; utargs.phi=0; 
+    utfunc = @(t, args) args.A*sin(2*pi*args.f*t + args.phi);
+    DAE = feval(DAE.set_utransient, utfunc, utargs, DAE);
+
+  % Set up LMS object
+    TransObjBE = LMS(DAE); % default method is Backward Euler (BE), 
+                           % but it also defines TRAPparms (Trapeziodal)
+                           % Forward Euler(FEparms), GEAR2 (GEAR2Parms)
+  % Run transient and plot
+    xinit = [3; 3; -0.5];        % Initial condition
+    tstart = 0; tstop = 5e-2;    % Start and end time
+    tstep = 10e-5;               % Time step
+    
+  % Simulate TransObjBe object using BE method
+    TransObjBE = feval(TransObjBE.solve, TransObjBE, xinit, tstart, ...
+			tstep, tstop);
+  % Plot simulation results
+    [thefig, legends] = feval(TransObjBE.plot, TransObjBE, [], 'BE'); % BE plots
+
+If we want to use a different LMS method for transient simulation instead
+of default backward Euler, the new LMS method can be selected as shown
+in the following example. 
+
+EXAMPLE 2: Transient analysis on a BJT differential pair using
+           Trapezoidal method
+
+  % Creates a BJT differential pair circuit DAE in MATLAB workspace
+    DAE = BJTdiffpair_DAEAPIv6(); 
+
+  % Set transient input to the DAE
+    utargs.A = 0.2; utargs.f=1e2; utargs.phi=0; 
+    utfunc = @(t, args) args.A*sin(2*pi*args.f*t + args.phi);
+    DAE = feval(DAE.set_utransient, utfunc, utargs, DAE);
+
+  % Set up LMS object
+    TransObjBE = LMS(DAE); % default method is Backward Euler (BE), 
+                           % but it also defines TRAPparms (Trapeziodal)
+                           % Forward Euler(FEparms), GEAR2 (GEAR2Parms)
+
+  % Set up a different LMS object with TRAPparms method.
+  % TRAPparms contains the order, name (TRAP, in this case), alpha and
+  % beta fucntions and differentiation approximation algorithm.
+    TransObjTRAP = LMS(DAE,TransObjBE.TRAPparms);
+
+  % Setting up GEAR2 method in the LMS object can be done as follows:
+  % TransObjGEAR2 = LMS(DAE,TransObjBE.GEAR2.parms)
+
+  % Simulate TransObjBe object using BE method
+    TransObjBE = feval(TransObjBE.solve, TransObjBE, xinit, tstart, ...
+			tstep, tstop);
+  % Plot simulation results
+    [thefig, legends] = feval(TransObjBE.plot, TransObjBE, [], 'BE'); % BE plots
+
+
+EXAMPLE 3: Various plot options: (Transient simulation of a BJT
+           differenttial pair)
+XXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXX so on XXXXXXXXXXXXXx
+
+
+Tutorials on developing compact models in MAPP:
+---------------------------------------------- TODO:<Should we create an
+interactive guide for this too as done in "MAPP_quickstart.m"?> New
+"simulation-ready" compact models that are to be developed in MAPP environment
+should work robustly during DC, AC and transient simulation.
+<Insert-here-PURDUE-SPIN-TORQUE-MODEL-experience>
+
+Short video tutorials for MDE (with corresponding presentation slides and MATLAB
+code) are available at 
+
+http://<the-link-when-finalized>
+
+
+
+2. MAPP simulator fundamentals ------------------------------ DEVICE MODELS:
+ModSpec-Device-Model      - Brief overview of device models and help regarding
+building simulation-ready compact models using ModSpec API
+
+        List of device models in ModSpec API:
+
+        isrcModSpec.m             - Ideal current source vsrcModSpec.m
+        - Ideal voltage source resModSpec.m              - Linear resistor
+        capModSpec.m              - Linear capacitor indModSpec.m              -
+        Linear inductor  diodeModSpec.m            - Basic diode model
+        EbersMoll_BJT_ModSpec.m   - Ebers Moll Bipolar Junction Transistor (BJT)
+        model BSIM3v3_2_4_ModSpec.m     - BSIM3v3.2.4 model DAAV6ModSpec.m
+        - MIT Virtual Source (VS) model (DAAV6 version)
+          MVS_no_int_nodes_ModSpec  - MIT Virtual Source (VS) model w/o source
+          and drain resistance MVSModSpec                - MIT Virtual Source
+          (VS) model version 0.0.1 
+
+
+
+CIRCUITS AND DAEs: Circuits-as-DAE          - Brief overview of circuits as
+Differential Algebraic Equations (DAEs) 
+
+        List of circuits in DAEAPI :: <TODO> Currently, handwritten (partially.
+        There are unfilled entry below. Should be auto-generated, but need to
+        separate circuit DAEs from other miscellaneous files in the DAEs folder.
+        </TODO>
+
+         MNAEqnEngine_resistive_divider           - Voltage source with
+         resistive divider (MNA Equation Engine) BJTdiffpair_DAEAPIv6.m
+         - Differential pair using Bers-Moll BJTs (DAEAPI)
+         MNAEqnEngine_vsrc_diode.m                - Voltage source and diode
+         circuit reprsented (MNA Equation Engine) BJTdiffpairRelaxationOsc.m
+         - Relaxation oscillation based on BJT differential pair (DAEAPI)
+         MNAEqnEngine_vsrcRCL.m                   - RLC circuit with voltage
+         source (MNA Equation Engine) BJTdiffpairSchmittTrigger.m              -
+         Schmitt Trigger based on BJT differential pair MNAEqnEngine_vsrcRC.m
+         - Voltage source with RC circuit (MNA Equation Engine)
+         BJT-Ptype-mirror-floating.m              - P-type BJT current mirror
+         block with input and output nodes floating   BJTschmittTrigger.m
+         - BJT schmitt trigger circuit parallelLC.m
+         - Parallel Rc (no source) parallelRLC.m                            -
+         Current source in parallel with parallel RLC parallelRLCdiode.m
+         - Current source parallel to parallel RLC diode [ I(t) || R || L || C
+         || diode ] brusselatorOsc.m                         - Brusselator
+         oscillator BSIM3_ringosc.m                          - A three stage
+         ring oscillator with BSIM3 MOSFET circadianOsc_Drosophila.m
+         - Model for Circadian Oscillations in the Drosophila Period Protein
+         rabbitSANosc.m                           - Action potential in the
+         periphery and center of the rabbit sinoatrial (SA) node
+         CMOS_xgate_floating.m                    - CMOS transmission gate using
+         Shichmann-Hodges model with drain-source inversion RClineDAEAPIv6.m
+         - RC line <TODO: Expand> RLClineDAEAPIv6.m                        - RLC
+           line <TODO: Expand> RClineWeigenvectorInputDAEAPIv6.m        - RC
+           line with (with eigen vector input) <TODO:exapand>
+           coupledRCdiodeSpringsMasses.m            - A vsrc-R-C-diode system,
+           bidirectionally coupled with a system of 2 springs and 2 masses.
+           DAAV6_updown_asymm_ringosc.m             - A 3-stage ring oscillator
+           made with DAAv6 MOSFETs resistor_floating.m                      - A
+           floating resistor between two nodes res_vsrc_diode_RLC.m
+           - A circuit consisting of voltage source, diode and RLC
+           RLCseries_floating.m                     - A floating series RLC
+           circuit: RLCseries.m                              - RLC series
+           cricuit with voltage source diodeCapIsrc_daeAPIv6.m
+           - ISRC-diode-capacitor circuit fullWaveRectifier_DAEAPIv6.m
+           - Fullwave reactifier feeding a load of a resistor and a parallel
+           capacitor SH_CMOS_inverter_DAEAPIv6.m              - CMOS inverter
+           using Shichmann-Hodges model Soloveichik_ABC_oscillator.m
+           inverterchain_DAEAPIv6_old.m
+           Soloveichik_ABC_oscillator_old.m inverterchain_floating.m
+           Soloveichik_ABC_oscillator_stabilized.m inverterchain.m
+           Soloveichik_ABC_oscillator_stabilized_w_inputs.m LCtanhOsc.m
+           threeStageRingOsc.m make_DAE.m
+           TwoReactionChainDAEAPIv6_2.m MLCparallel.m
+           UltraSimplePLL_DAEAPIv6.m MNAEqnEngine_DAAV6_P_N_devices.m
+           vsrc.m MNAEqnEngine_DAAV6_ringosc.m
+           vsrcRLCdiode_daeAPIv6.m MNA_EqnEngine.m
+           vsrc_xgate_resistor.m MNAEqnEngine_MOSFET_P_N_devices.m
+
+ANALYSES AND ALGORITHMS: Three different kind of analyses are supported in the
+current version of MAPP: a) DC, b) AC and c) transient. 
+
+To get a brief overview of general analysis procedures on a circuit DAE, type
+"help Circuit-Analysis" (without quotes).
+
+        Circuit-Analyses        - General overview of circuit analysis
+        fundamentals
+
+VECVALDER: VECVALDERREADME
+
+
+
+3. MAPP STRUCTURE:
+--------------------------------------------------------------------------------------------
+MAPP is organized in four directories: Ao1DAEAPI, DAEAPI, ModSpec and vecvalder.
+
+MAPP/A1oDAEAPI                       - Basic analyses (DC, AC, and transient) on
+circuits described by DAEAPI |                              (for more, type
+"help A1oDAEAPI") | |---> analyses-algorithms    - Algorithms for doing
+different analyses (for more, "help analyses-algorithms") | |---> test-scripts
+- Scripts for doing different analyses on various circuits DAEs |
+(for getting a complete list of available test scripts (demos), "help
+analyses-test-scripts") | |---> usability-helpers      - Usability helper
+functions for MATLAB DAEAPI (for getting the complete list of available |
+usability helper functions, "help analyses-usability-helpers") | |---> utils
+- Utility functions for basis analyses on circuit DAEs (for getting the complete
+list of available utility functions, "help analyses-utils")
+
+
+MAPP/DAEAPI                          - MATLAB API to describe circuits as
+nonlinear DAEs (for more, type "help DAEAPI") | |---> DAEs                   -
+Various circuits represented in MATLAB DAEAPI (to get a complete list, type |
+"help DAEs") | |---> test-scripts           - NOT SURE IF THIS IS REQUIRED IN
+HELP SYSTEM | |---> device-model           - NOT SURE IF THIS IS REQUIRED IN
+HELP SYSTEM | |---> utils                  - Utility functions for creating DAEs
+(for getting the complete list of available utility functions, "help
+DAEAPI-utils")
+        
+MAPP/ModSpec                         - MATLAB API to describe compact models
+(for more, type "help ModSpec") | |---> device-models          - Various
+simulation-ready compact device models represented in MATLAB DAEAPI |
+(to get a complete list, type "help ModSpec-device-models") | |--->
+smoothingfuncs         - Various smoothing function to smooth model
+discontinuities (for a complete list of smoothing |
+functions, type "help smoothingfuncs") | |---> test-scripts           - MATLAB
+scripts to run tests on various ModSpec model and compare the output results |
+with previously stored test data (*.mat files) in /test-data directory | |--->
+test-data              - Directory with stored output data (*.mat files) for
+different tests on various ModSpec models | |---> utils                  -
+External utility functions used in creating a standard ModSpec model (for
+complete list, type "help ModSpec-utils")
+
+
+MAPP/vecvalder                       - Package to perform automatic
+differentiation in MATLAB/Ocatave | |---> @vecvalder             - Various
+overloaded functions implemented in vecvalder package. This directory also
+includes |                              the class definition file vevvalder.m.
+(for complete list of functions, type "help |
+vecvalder-functions") | |---> tests                  - Various test scripts to
+compare derivative of different functions computed using  vecvalder |
+package (automatic differentiation) and symbolic differentiation for different
+functions.  |                              (for complete list, type  "help
+vecvalder-tests") | |---> utils                  - Utility functions for
+vecvalder package (For more, type "help vecvalder-utils"
+
+
+        
+4. EXTENDING MAPP
+----------------------------------------------------------------------------------------------------------------
+
+"help HT-Circuit-DAE"               - How to hand-code circuit DAE in MAPP
+framework "help HT-Device-Model"              - How to write new device model
+"help HT-Analysis"                  - How to do basic DA, AC and transient
+analysis "help HT-EquationEngine"            - How to build a new equation
+engine (sparse-tableau) "help HT-TestAutomation"            - How to build a new
+test automation system "help HT-Miscellaneous"             - Miscellaneous
+How-tos

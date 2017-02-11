@@ -1,0 +1,2 @@
+1. Move all the ModSpec models in ModSpec/ModSpec-MATLAB-API/*.m to
+   ModSpec/ModSpec-MATLAB-API/device-models/*.m

@@ -1,0 +1,1 @@
+../../../../DAEAPI/DAEs/cktnetlists/MOS1_D_latch_core_2N1P_w_SYNC_ckt.m

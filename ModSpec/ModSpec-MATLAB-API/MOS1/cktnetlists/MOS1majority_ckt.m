@@ -1,0 +1,1 @@
+../../../../DAEAPI/DAEs/cktnetlists/MOS1majority_ckt.m

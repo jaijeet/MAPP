@@ -1,0 +1,1 @@
+../../../../DAEAPI/DAEs/cktnetlists/MOS1amp_ckt.m

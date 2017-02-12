@@ -1,0 +1,1 @@
+../../../../DAEAPI/DAEs/cktnetlists/MOS1inverter_ckt.m

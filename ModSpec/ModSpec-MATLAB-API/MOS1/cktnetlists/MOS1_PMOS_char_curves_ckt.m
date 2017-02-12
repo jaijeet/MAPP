@@ -1,0 +1,1 @@
+../../../../DAEAPI/DAEs/cktnetlists/MOS1_PMOS_char_curves_ckt.m

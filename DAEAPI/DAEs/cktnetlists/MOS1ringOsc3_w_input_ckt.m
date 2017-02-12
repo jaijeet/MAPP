@@ -19,21 +19,21 @@ function cktnetlist = MOS1ringOsc3_w_input_ckt()
 % DAE = MNA_EqnEngine(MOS1ringOsc3_w_input_ckt);
 %
 % % DC analysis %
-% qss = dot_op(DAE);       
+% qss = op(DAE);       
 % feval(qss.print, qss);
 %
 % % transient analysis %
 % xinit = zeros(feval(DAE.nunks, DAE),1);
 % xinit(2) = 3;
 % tstart = 0; tstep = 1e-6; tstop = 3e-4;
-% LMSobj = dot_transient(DAE, xinit, tstart, tstep, tstop);
+% LMSobj = transient(DAE, xinit, tstart, tstep, tstop);
 % feval(LMSobj.plot, LMSobj);
 %
 %See also
 %--------
 % 
 % add_element, supported_ModSpec_devices[TODO], DAEAPI[TODO], DAE[TODO]
-% dot_op, dot_transient
+% op, transient
 %
 
 %

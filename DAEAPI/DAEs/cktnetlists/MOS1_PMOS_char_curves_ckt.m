@@ -18,7 +18,7 @@ function cktnetlist = MOS1_PMOS_char_curves_ckt()
 % DAE = MNA_EqnEngine(MOS1_PMOS_char_curves_ckt);
 % 
 % % DC analysis %
-% dcop = dot_op(DAE);
+% dcop = op(DAE);
 % dcop.print(dcop);
 % qssSol = dcop.getSolution(dcop);
 % 
@@ -36,7 +36,7 @@ function cktnetlist = MOS1_PMOS_char_curves_ckt()
 % % run DC sweep in a for loop %
 % for c = 1:length(VGBs)
 %     DAE = DAE.set_uQSS('Vg:::E', VGBs(c), DAE);
-%     swp = dot_dcsweep(DAE, [], 'Vd:::E', min(VDBs), max(VDBs), length(VDBs));
+%     swp = dcsweep(DAE, [], 'Vd:::E', VDBs);
 %     [pts, Sols] = swp.getsolution(swp);
 %     IDs(c, :) = - Sols(idx, :);
 % end % Vgg

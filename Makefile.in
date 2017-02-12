@@ -88,7 +88,7 @@ $(MAPPTOP)/locallinks-are-current: $(MAPPLOCALLINKSDIR)
 	    cd $(MAPPLOCALLINKSDIR)/$(MODSPEC); \
 		if [ -e $(MAPPTOP)/$(LOCALMODSPEC)/../0-README ]; then ln -s $(MAPPTOP)/$(LOCALMODSPEC)/../0-README .; fi; \
 		if [ -e $(MAPPTOP)/$(LOCALMODSPEC)/../00-VERSION ]; then ln -s $(MAPPTOP)/$(LOCALMODSPEC)/../00-VERSION .; fi; \
-		for i in `(cd $(MAPPTOP)/$(LOCALMODSPEC); find . -type d -not -wholename '*MVS-old*' -not -wholename '*smoothingfuncs/bad*')`; do \
+		for i in `(cd $(MAPPTOP)/$(LOCALMODSPEC); find . -type d -not -wholename '*MVS-old*' -not -wholename '*smoothingfuncs/bad*' -not -wholename '*/MOS1/*')`; do \
 				cd $(MAPPTOP)/$(LOCALMODSPEC)/$$i; DOTMFILES=`echo *.m`; \
 				if [ "$$DOTMFILES" != '*.m' ]; then \
 					cd $(MAPPLOCALLINKSDIR)/$(MODSPEC)/; \

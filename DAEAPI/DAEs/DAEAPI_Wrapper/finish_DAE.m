@@ -1,12 +1,12 @@
 function out = finish_DAE(DAE, skipfqzeroevals)
 %function out = finish_DAE(DAE, skipfqzeroevals)
 %
-% Used to finish the definition of a DAE using DAEAPI wrapper (ie, started
-% with init_DAE() and populated with add_to_DAE()). help DAEAPI_wrapper for
+% Used to complete the definition of a DAE using DAEAPI wrapper (ie, started
+% with init_DAE() and populated with add_to_DAE()). help add_to_DAE for
 % details.
 %
 % The second argument skipfqzeroevals is optional, with default 0. If set to
-% 1, DAE f/q function evaluations (for checking) with all zero arguments
+% 1, DAE f/q function evaluations  with all zero arguments (used for checking)
 % are skipped. This is useful if these functions blow up at zero, as in simple
 % EM/gravitational models.
 %

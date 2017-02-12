@@ -1,8 +1,8 @@
 %Differential-Algebraic Equations in MAPP
 %----------------------------------------
 %
-%In MAPP, differential-algebraic equations (DAEs) are written in the following
-%general form:
+%Differential-algebraic equations (DAEs) are a central concept around which
+%MAPP is based. MAPP's DAEs have the following general form:
 %
 %       d/dt [q(x(t))] + f(x(t), u(t)) = 0,
 %       y(t) = C*x(t) + D*u(t).
@@ -13,21 +13,11 @@
 %outputs, while C and D are matrices of size n_o x n and n_o x n_u,
 %respectively.
 %
-%DAEAPI wrapper (help DAEAPI_wrapper) is a convenient high-level wrapper that
-%MAPP provides (on top of its lower-level DAEAPI API) for describing such DAEs.
-%
-%To write a DAE using DAEAPI wrapper:
-%
-%1. Start with
-%	    DAE = init_DAE();
-%2. Then put in several
-%	    DAE = add_to_DAE(DAE, 'field_name', field_value);
-%   statements to augment the skeleton structure.
-%3. Finally, end with
-%	    DAE = end_DAE(DAE);
-%
-%help add_to_DAE for more information and examples.  Once the DAE is set up,
-%you can run MAPP's analyses (help MAPPanalyses) on it.
+%MAPP's DAEAPI wrapper (help DAEAPI_wrapper) is a convenient high-level wrapper
+%that MAPP provides for describing such DAEs. It is also possible to define
+%DAEs directly using its low-level API (help DAEAPI).  Once a DAE has been
+%defined, you can test its functions (described in help DAEAPI) and run
+%MAPP's analyses (help MAPPanalyses) on it.
 %
 %Examples
 %--------
@@ -37,7 +27,8 @@
 % 
 %See also
 %--------
-%  init_DAE, add_to_DAE, finish_DAE, check_DAE, DAEAPI_wrapper, DAEAPI.
+%
+% init_DAE, add_to_DAE, finish_DAE, check_DAE, DAEAPI_wrapper, DAEAPI.
 %
 
 

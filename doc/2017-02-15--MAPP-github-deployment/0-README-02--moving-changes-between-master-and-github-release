@@ -1,0 +1,131 @@
+The focus of this README is to transfer desired changes between master (on hagrid-MAPP), 2017-02-15-github-release (on hagrid-MAPP), and 2017-02-15-github-release-GITHUB-branch (on github-MAPP).  [Recall that 2017-02-15-github-release is a branch in the main hagrid-MAPP repository that is connected to master and other branches; while 2017-02-15-github-release-GITHUB-release is an "orphan" copy of that (see 0-README-01-first-setup-of-release) that has github-MAPP as a remote, and does NOT have hagrid-MAPP as a remote.]
+
+The process uses cherry picking. It's a little involved and requires keeping track of things manually, which requires discipline for things to go smoothly.  (Note that git rebase is not well suited for the required transfers, since it removes the commits it rebases from their original location.)
+
+There are two types of transfers needed:
+
+1. Between 2017-02-15-github-release and 2017-02-15-github-release-GITHUB-release. This will use cherry-picking in both directions (since a. 2017-02-15-github-release-GITHUB-release is disconnected from 2017-02-15-github-release, and b. the two should be kept identical).
+
+2. Between master and 2017-02-15-github-release. This will use git merge from master to 2017-02-15-github-release, and cherry-picking only from 2017-02-15-github-release to master (since 2017-02-15-github-release is a strict subset of master, with many changes that should not be transmitted to master; whereas (for the most part) changes to master should propagate to 2017-02-15-github-release).
+
+Here's the procedure and discipline that needs to be followed to achieve these transfers:
+
+1. Using cherry-picking on 2017-02-15-github-release and 2017-02-15-github-release-GITHUB-release to incorporate changes in each into the other and make them identical
+
+   a. We start with identifying the last identical revisions (ie, git diff between them returns empty) in each branch:
+      - 2017-02-15-github-release-GITHUB-release was "orphaned" from 2017-02-15-github-release in the first place (see 0-README-01-first-setup-of-release), those two revisions were the first such identical revisions.
+      - after each cherry-picking session, the HEADS of the two branches should be identical and tagged with names like:
+        - (tag of 2017-02-15-github-release's HEAD) cherrypicking-session-GH3-now-identical-to-4e653f8c-on-2017-02-15-github-release-GITHUB-branch
+        - (tag of 2017-02-15-github-release-GITHUB-branch's HEAD) cherrypicking-session-GH3-now-identical-to-694e91a3-on-2017-02-15-github-release
+      - git log --graph --oneline [<branchname>] is very helpful for finding these identical branches. As is gitg.
+
+   b. Since the last cherry-picking/making-identical session, each branch will have had a number of commits to their heads.
+      - give temporary tags to each of these heads using git tag after checking out each branch. For example:
+        - (tag of 2017-02-15-github-release's HEAD) tmpA
+        - (tag of 2017-02-15-github-release-GITHUB-branch's) tmpB
+
+   c. Now, git checkout one branch, say 2017-02-15-github-release, and cherry pick the changes on git 2017-02-15-github-release-GITHUB-branch into it.
+      - git co 2017-02-15-github-release
+      - git cherry-pick -x --no-commit ^cherrypicking-session-GH3-now-identical-to-694e91a3-on-2017-02-15-github-release tmpB # details below under How to cherry-pick
+
+   d. 2017-02-15-github-release has got all the changes to git 2017-02-15-github-release-GITHUB-branch. We now do the reverse: checkout 
+      - git co 2017-02-15-github-release-GITHUB-branch
+      - git cherry-pick -x --no-commit ^cherrypicking-session-GH3-now-identical-to-4e653f8c-on-2017-02-15-github-release-GITHUB-branch tmpA 
+
+   e. check that the two branches' HEADS are now identical:
+      - git diff 2017-02-15-github-release # should return empty
+
+   f. tag the two heads to indicate the now-most-recent identical revisions:
+      - git co 2017-02-15-github-release-GITHUB-branch
+      - grab the hash of HEAD from git log --oneline --graph 2017-02-15-github-release (say it is XXX)
+      - git tag cherrypicking-session-GH4-now-identical-to-XXX-on-2017-02-15-github-release
+      - git co 2017-02-15-github-release
+      - grab the hash of HEAD from git log --oneline --graph 2017-02-15-github-release-GITHUB-branch (say it is YYY)
+      - git tag cherrypicking-session-GH4-now-identical-to-YYY-on-2017-02-15-github-release-GITHUB-branch
+
+   g. remove the temporary tags tmpA and tmpB so that they can be used again.
+
+
+2. Using merging and cherry-picking to transfer stuff between 2017-02-15-github-release and master
+
+   a. to move stuff from master to 2017-02-15-github-release
+      - the best way is to git co 2017-02-15-github-release and then git merge master (or some other branch).
+        - this pulls in all changes to master since the last merge (or fork point) - assuming this is what you want.
+      - but there may occasionally be situations where you don't want to pull in all the changes you made to master.
+        - in which case, best to do git merge --no-commit, take out the changes you don't want manually, then commit. This enables you to continue using merge later.
+        - cherry-picking is problematic, because any future merge will pull in the stuff you wanted to keep out, messing everything up.
+
+   b. to move stuff from 2017-02-15-github-release to master - here, cherry-picking is needed:
+
+      1. in the branch 2017-02-15-github-release, identify a commit, or a range of commits, that you want to port back to master. Tag the range temporarily as FROM and TO
+
+      2. git co master; git cherry-pick -x --no-commit ^FROM TO # details below under How to cherry-pick
+
+      3. make tags to keep a clear record and to avoid re-cherrypicking what has already been cherry-picked:
+         - first get the hashes of FROM and TO (using git log --online --graph 2017-02-15-github-release)
+         - git co master; git tag M2-cherrypicked-<FROMTAG>-through-<TOTAG>-from-2017-02-15-github-release
+         - get the hash of master's HEAD
+         - git co 2017-02-15-github-release; git tag M2-this-commit-downto-<FROMTAG>-cherrypicked-to-<MASTERHEADHASH>-on-master TO
+         - git tag M2-this-commit-upto-<TOTAG>-cherrypicked-to-<MASTERHEADHASH>-on-master FROM
+
+      4. remove the temporary tags FROM and TO.
+
+
+HOW TO CHERRY PICK
+------------------
+
+- check out the branch and revision (typically HEAD, not sure what happens otherwise, probably detached HEAD) on top of which you want to port a range of commits from the other branch. Eg, for concreteness, say the checked-out branch is (the HEAD of) 2017-02-15-github-release-GITHUB-branch; the other branch is 2017-02-15-github-release.
+
+- identify and keep handy the tags/commit-revs from the last cherrypicking session that identify the identical versions on the two branches.
+
+- then give the command: git cherry-pick -x --no-commit ^<from-revision-on-other-branch> <to-revision-on-other-branch>
+  - <from-revision-on-other-branch> should be the identical-tag on the other branch, <to-revision-on-other-branch> should be the head of the other branch.
+  - eg: git cherry-pick -x --no-commit ^this-commit-initiates-2017-02-15-github-release-GITHUB-branch 2017-02-15-github-release # last arg is HEAD of the other branch
+  - or: git cherry-pick -x --no-commit ^cherrypicking-session-GH1-now-identical-to-3503fc62-on-2017-02-15-github-release 2017-02-15-github-release 
+
+- in simple cases, the above command will simply return and the cherry-picking is done.
+  - check using git cherry-pick --continue; it should say that no cherry-picking session is in progress
+  - git status will show the stuff that has been cherry picked.
+  - you can then git commit.
+  
+- but typically, there will be conflicts and/or problems with merged revisions:
+  - for conflicts, fix/add them in the usual way, and also commit them manually
+    - these commits are all within the cherry-picking session, and can be undone with git cherry-pick --abort. If somehow cherry-pick has already finished, then there's always git revert.
+    - then, git cherry-pick --continue
+  - merged revisions: cherry-pick will stop if it is trying to pick up stuff from a merged revision, in which case it asks for a parent number (like 1, 2, etc).
+    - you can see the parents using git log --graph --oneline. The leftmost parent of the merged revision is 1, the next one is 2, etc..
+    - cherry-pick will pick up the diff between the merged revision and the parent number you specify. You will typically want to specify the parent on the same branch you are cherry-picking from (which should be 1, but check).
+    - git cherry-pick -m <parent-number> does the job.
+
+- there's always git --abort if things mess up. git --quit can also be useful, as it only undoes the last mess, keeping previous cherry-picks intact (presumably - not checked).
+
+- you should edit the commit messages during cherry picking
+  - the default commit messages after cherry-picking are downright bad and will lead to confusion when examining logs. You need to edit them.
+  - the -x argument to cherry-pick includes a line in the commit message like: (cherry picked from commit 3503fc6296acd54cc2eeb6b4751e604c42fd1347). Copy this line to the first line and edit it to something like this:
+    - 2017-02-15-github-release-GITHUB-branch: cherry picked commit 3503fc6296acd54cc2eeb6b4751e604c42fd1347 from branch 2017-02-15-github-release [summary of what was cherry picked]
+  - delete the remaining uncommented text in the default commit message, and remove the comments from the commented text - it's a much more direct description of what's been pulled in by the cherry pick.
+
+- Once you are done, do a git diff with the head of the other branch. Get it to be identical, then tag both branches with new identical tags.
+
+- given the extreme potential for getting confused and messing up, best to cherry-pick one commit at a time.
+
+- revision range notation: ^r1 r2 and .. (from git help gitrevisions):
+	^r1 r2 means commits reachable from r2 but exclude the ones reachable from r1 (i.e. r1 and its ancestors).
+	
+     The .. (two-dot) Range Notation
+           The ^r1 r2 set operation appears so often that there is a shorthand for it. When you have two commits r1 and r2 (named according to the syntax explained in
+           SPECIFYING REVISIONS above), you can ask for commits that are reachable from r2 excluding those that are reachable from r1 by ^r1 r2 and it can be written as
+           r1..r2.
+
+     You can omit one end and let it default to HEAD. For example, origin.. is a shorthand for origin..HEAD and asks "What did I do
+     since I forked from the origin branch?" Similarly, ..origin is a shorthand for HEAD..origin and asks "What did the origin do since I forked from them?" Note that ..
+     would mean HEAD..HEAD which is an empty range that is both reachable and unreachable from HEAD.
+
+- Remaining questions about cherry-picking:
+  - what happens if you (accidentally or otherwise) try to re-apply the same changes twice? Does git cherry-pick have a way to catch it?
+    - the answer seems to be no. cherry-pick tries to re-apply the changes, one by one, to your current version. So you have to be careful to keep track manually of what has already been cherry-picked. Can do so using tags and following a strict discipline.
+  
+  - what happens if you first cherry pick stuff from B to A, then add stuff to A, then cherry-pick from A to B? Does git get confused or try to re-apply the original stuff in B twice?
+    - not explored yet, but unlikely to be useful. use the above tag discipline to avoid this situation.
+
+

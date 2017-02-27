@@ -17,7 +17,7 @@ Here's the procedure and discipline that needs to be followed to achieve these t
       - after each cherry-picking session, the HEADS of the two branches should be identical and tagged with names like:
         - (tag of 2017-02-15-github-release's HEAD) cherrypicking-session-GH3-now-identical-to-4e653f8c-on-2017-02-15-github-release-GITHUB-branch
         - (tag of 2017-02-15-github-release-GITHUB-branch's HEAD) cherrypicking-session-GH3-now-identical-to-694e91a3-on-2017-02-15-github-release
-      - git log --graph --oneline [<branchname>] is very helpful for finding these identical branches. As is gitg.
+      - git log --graph --oneline --decorate [<branchname>] is very helpful for finding these identical branches. As is gitg.
 
    b. Since the last cherry-picking/making-identical session, each branch will have had a number of commits to their heads.
       - give temporary tags to each of these heads using git tag after checking out each branch. For example:
@@ -37,10 +37,10 @@ Here's the procedure and discipline that needs to be followed to achieve these t
 
    f. tag the two heads to indicate the now-most-recent identical revisions:
       - git co 2017-02-15-github-release-GITHUB-branch
-      - grab the hash of HEAD from git log --oneline --graph 2017-02-15-github-release (say it is XXX)
+      - grab the hash of HEAD from git log --oneline --decorate --graph 2017-02-15-github-release (say it is XXX)
       - git tag cherrypicking-session-GH4-now-identical-to-XXX-on-2017-02-15-github-release
       - git co 2017-02-15-github-release
-      - grab the hash of HEAD from git log --oneline --graph 2017-02-15-github-release-GITHUB-branch (say it is YYY)
+      - grab the hash of HEAD from git log --oneline --decorate --graph 2017-02-15-github-release-GITHUB-branch (say it is YYY)
       - git tag cherrypicking-session-GH4-now-identical-to-YYY-on-2017-02-15-github-release-GITHUB-branch
 
    g. remove the temporary tags tmpA and tmpB so that they can be used again.
@@ -62,7 +62,7 @@ Here's the procedure and discipline that needs to be followed to achieve these t
       2. git co master; git cherry-pick -x --no-commit ^FROM TO # details below under How to cherry-pick
 
       3. make tags to keep a clear record and to avoid re-cherrypicking what has already been cherry-picked:
-         - first get the hashes of FROM and TO (using git log --online --graph 2017-02-15-github-release)
+         - first get the hashes of FROM and TO (using git log --online --graph --decorate 2017-02-15-github-release)
          - git co master; git tag M2-cherrypicked-<FROMTAG>-through-<TOTAG>-from-2017-02-15-github-release
          - get the hash of master's HEAD
          - git co 2017-02-15-github-release; git tag M2-this-commit-downto-<FROMTAG>-cherrypicked-to-<MASTERHEADHASH>-on-master TO
@@ -93,11 +93,11 @@ HOW TO CHERRY PICK
     - these commits are all within the cherry-picking session, and can be undone with git cherry-pick --abort. If somehow cherry-pick has already finished, then there's always git revert.
     - then, git cherry-pick --continue
   - merged revisions: cherry-pick will stop if it is trying to pick up stuff from a merged revision, in which case it asks for a parent number (like 1, 2, etc).
-    - you can see the parents using git log --graph --oneline. The leftmost parent of the merged revision is 1, the next one is 2, etc..
+    - you can see the parents using git log --graph --oneline --decorate. The leftmost parent of the merged revision is 1, the next one is 2, etc..
     - cherry-pick will pick up the diff between the merged revision and the parent number you specify. You will typically want to specify the parent on the same branch you are cherry-picking from (which should be 1, but check).
     - git cherry-pick -m <parent-number> does the job.
 
-- there's always git --abort if things mess up. git --quit can also be useful, as it only undoes the last mess, keeping previous cherry-picks intact (presumably - not checked).
+- there's always git cherry-pick --abort if things mess up. git cherry-pick --quit can also be useful, as it only undoes the last mess, keeping previous cherry-picks intact (presumably - not checked).
 
 - you should edit the commit messages during cherry picking
   - the default commit messages after cherry-picking are downright bad and will lead to confusion when examining logs. You need to edit them.

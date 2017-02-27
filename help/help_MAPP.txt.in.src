@@ -30,8 +30,7 @@ MAPPcktnetlists    - how to enter a circuit (ie, write a "netlist") in MAPP.
 MAPPdaes           - how to describe differential (-algebraic) equations (DAEs)
                      directly in MAPP, quickly and conveniently.
 
-MAPPanalyses       - how to run DC, AC, transient and homotopy analyses in 
-                     MAPP.
+MAPPanalyses       - analyses (DC, AC, transient, etc.) supported in MAPP.
 
 
 Working with MAPP

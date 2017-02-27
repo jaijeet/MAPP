@@ -1,13 +1,13 @@
-function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag)
-%function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag)
-%This function performs QSS sensitivity analysis, both direct and adjoint. The
+function dcsensobj = dcsens(DAE, DCsol, uDC, parmORinputObj, parmORinputFlag)
+%function dcsensobj = dcsens(DAE, DCsol, uDC, parmORinputObj, parmORinputFlag)
+%This function performs DC sensitivity analysis, both direct and adjoint. The
 %analysis calculates the sensitivity of DAE state outputs to either parameters
 %or inputs.
 %
 %INPUT args:
 %   DAE              - circuit DAE.
-%   QSSsol           - QSS solution for the sensitivity analysis.
-%   QSSu             - QSS input for the sensitivity analysis.
+%   DCsol            - DC solution for the sensitivity analysis.
+%   uDC              - DC input for the sensitivity analysis.
 %                      If the DAE doesn't require inputs, put [].
 %   parmORinputObj   - parameter object or input object of the DAE.
 %
@@ -15,7 +15,7 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 %                      Inputs(DAE).
 %                      
 %                      Note 2: If it is [], all parameters or inputs are used
-%                      in QSSsens.
+%                      in dcsens.
 %
 %   parmORinputFlag  - (optional) a flag, either 'input' or 'parm', indicating
 %                      whether parmORinputObj is an input or parameter object.
@@ -32,11 +32,11 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 %     qdot(x, p) + f(x, u(t), p) + m(x, n(t), p) = 0
 %     y = C*x + D*u(t)
 %
-%For QSS sensitivity analysis, we ignore the noise term m(...) and
+%For DC sensitivity analysis, we ignore the noise term m(...) and
 %the qdot term.
 %
 %1. Parameter sensitivity:
-%   After solving for a QSS steady state at some nominal p, differentiate
+%   After solving for a DC steady state at some nominal p, differentiate
 %   around it wrt the parameter vector p to obtain:
 %
 %     Gf*dx + Sf*dp= 0
@@ -53,7 +53,7 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 %     2) Sy = z^* Sf
 %
 %2. Input sensitivity:
-%   After solving for a QSS steady state at some nominal u, differentiate
+%   After solving for a DC steady state at some nominal u, differentiate
 %   around it wrt the input vector u to obtain:
 %
 %     Gf*dx + Sf*du= 0
@@ -80,7 +80,7 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 % 
 % % find DC solution
 % uDC = 0.6;
-% DAE = feval(DAE.set_uQSS, uDC, DAE);
+% DAE = feval(DAE.set_uDC, uDC, DAE);
 % dcop = op(DAE);
 % sol = dcop.getSolution(dcop);
 % 
@@ -96,8 +96,8 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 % lastnode = sprintf('e%d', nstages);
 % outs = feval(outs.Add, {lastnode}, outs);
 % 
-% % QSS sensitivity setup
-% SENS = QSSsens(DAE, sol, uDC, pobj);
+% % DC sensitivity setup
+% SENS = dcsens(DAE, sol, uDC, pobj);
 % 
 % % Direct sensitivity computation
 % adjoint = 0;
@@ -114,7 +114,7 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 %See also
 %--------
 %
-% op, QSS, NR, analyses-algorithms, DAE_concepts, DAEAPI
+% op, MAPPanalyses, MAPPdaes, DAEAPI, Inputs, Parameters, QSS, NR
 %
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -134,9 +134,9 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 
     % process inputs
     if (nargin > 5) | (nargin < 4)
-        fprintf(2, sprintf('%s: error: too many or too few arguments.\n', QSSsensobj.name));
-        help('QSSsens');
-        QSSsensobj = [];
+        fprintf(2, sprintf('%s: error: too many or too few arguments.\n', dcsensobj.name));
+        help('dcsens');
+        dcsensobj = [];
         return;
     end
 
@@ -149,30 +149,30 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 
     if strcmp(parmORinputFlag, 'parm')
 		ParmObj = parmORinputObj;
-        QSSsensobj.ParmObj = ParmObj;
+        dcsensobj.ParmObj = ParmObj;
     elseif strcmp(parmORinputFlag, 'input')
 		InputObj = parmORinputObj;
-        QSSsensobj.InputObj = InputObj;
+        dcsensobj.InputObj = InputObj;
     else
-        fprintf(2, sprintf('%s: error: parmORinputFlag has to be either ''parm'' or ''input''.\n', QSSsensobj.name));
-        help('QSSsens');
-        QSSsensobj = [];
+        fprintf(2, sprintf('%s: error: parmORinputFlag has to be either ''parm'' or ''input''.\n', dcsensobj.name));
+        help('dcsens');
+        dcsensobj = [];
         return;
     end
-	QSSsensobj.parmORinputFlag = parmORinputFlag;
+	dcsensobj.parmORinputFlag = parmORinputFlag;
 
     % usage and name strings
-    QSSsensobj.name = 'QSS Sensitivity Analysis for DAEAPIv6';
-    QSSsensobj.Usage = 'Run "help QSSsens;" at MATLAB prompt';
+    dcsensobj.name = 'DC Sensitivity Analysis for DAEAPIv6';
+    dcsensobj.Usage = 'Run "help dcsens;" at MATLAB prompt';
 
     % precomputation and data setup
     if 0 == DAE.f_takes_inputs
-        QSSsensobj.Gf = feval(DAE.df_dx, QSSsol, DAE);
+        dcsensobj.Gf = feval(DAE.df_dx, DCsol, DAE);
     else
-        QSSsensobj.Gf = feval(DAE.df_dx, QSSsol, QSSu, DAE);
+        dcsensobj.Gf = feval(DAE.df_dx, DCsol, uDC, DAE);
     end
 
-    QSSsensobj.DAE = DAE;
+    dcsensobj.DAE = DAE;
 	if strcmp(parmORinputFlag, 'parm')
 		%%%%%%%%%%%%%%%%%%%%%%% begin computing Sf = df/dp using vecvalder %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -198,9 +198,9 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 		DAE = feval(DAE.setparms, parmnames, vvcparms, DAE); % selected parms now set to vecvalders
 
 		if 0 == DAE.f_takes_inputs
-			vvf_of_x = feval(DAE.f, QSSsol, DAE); % vv because parms are vvs
+			vvf_of_x = feval(DAE.f, DCsol, DAE); % vv because parms are vvs
 		else
-			vvf_of_x = feval(DAE.f, QSSsol, QSSu, DAE);
+			vvf_of_x = feval(DAE.f, DCsol, uDC, DAE);
 		end
 
 		vv_df_dp = der2mat(vvf_of_x);
@@ -209,76 +209,76 @@ function QSSsensobj = QSSsens(DAE, QSSsol, QSSu, parmORinputObj, parmORinputFlag
 			vv_df_dp(neqns,nparms) = 0;
 		end
 
-		QSSsensobj.Sf = vv_df_dp;
+		dcsensobj.Sf = vv_df_dp;
 		%%%%%%%%%%%%%%%%%%%%%%% end computing Sf %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	else % if strcmp(parmORinputFlag, 'input')
 		if DAE.f_takes_inputs
-			df_du = DAE.df_du(QSSsol, QSSu, DAE);
+			df_du = DAE.df_du(DCsol, uDC, DAE);
 		else
 			df_du = DAE.B(DAE);
 		end
 		inputIndices = feval(InputObj.InputIndices, InputObj);
 		% FIXME: truncating df_du not efficient.
-		QSSsensobj.Sf = df_du(:, inputIndices);
+		dcsensobj.Sf = df_du(:, inputIndices);
 
 		Dmat = DAE.D(DAE); 
-		QSSsensobj.D = Dmat(:, inputIndices);
+		dcsensobj.D = Dmat(:, inputIndices);
 	end
 
-    QSSsensobj.Sx = [];
-    QSSsensobj.Sy = [];
-    QSSsensobj.z = [];
-    QSSsensobj.lastSolveType = 0; % 0=>not solved, 1=>direct, 2=>adjoint
-    QSSsensobj.QSSsol = QSSsol;
+    dcsensobj.Sx = [];
+    dcsensobj.Sy = [];
+    dcsensobj.z = [];
+    dcsensobj.lastSolveType = 0; % 0=>not solved, 1=>direct, 2=>adjoint
+    dcsensobj.DCsol = DCsol;
     if nargin > 2
-        QSSsensobj.QSSu = QSSu;
+        dcsensobj.uDC = uDC;
     end
 
     % externally callable functions
-    QSSsensobj.solve = @solve; % (stateoutputs, adjoint, QSSsensobj)
-    QSSsensobj.getSolution = @getSolution; % return Sx or Sy
-    QSSsensobj.print = @print; % (outputsObj, QSSsensobj)
-    QSSsensobj.plot = @plot; % (outputsObj, QSSsensobj) this should plot a bar chart of parameter sensitivities 
-end % end of QSSsens "constructor"
+    dcsensobj.solve = @solve; % (stateoutputs, adjoint, dcsensobj)
+    dcsensobj.getSolution = @getSolution; % return Sx or Sy
+    dcsensobj.print = @print; % (outputsObj, dcsensobj)
+    dcsensobj.plot = @plot; % (outputsObj, dcsensobj) this should plot a bar chart of parameter sensitivities 
+end % end of dcsens "constructor"
 
-function ObjOut = solve(stateoutputs, adjoint, QSSsensobj)
-%function ObjOut = solve(stateoutputs, adjoint, QSSsensobj)
-%This function runs noise analysis on a QSS sensitivity analyis object
+function ObjOut = solve(stateoutputs, adjoint, dcsensobj)
+%function ObjOut = solve(stateoutputs, adjoint, dcsensobj)
+%This function runs noise analysis on a DC sensitivity analyis object
 %INPUT args:
 %    stateoutputs        - if present and not [], compute PSDs of the outputs
 %                          specified; otherwise, compute PSDs of DAE-specified
 %                          outputs
 %    adjoint             - if present and == 1, run adjoint noise analysis. 
 %                          if absent or == 0, run direct noise analysis.
-%   QSSsensobj          - QSS sensitivity analysis object
+%   dcsensobj            - DC sensitivity analysis object
 %
 %OUTPUT:
-%   ObjOut              - QSS sensitivity analysis object with sensitivity
-%                         analysis solution
+%   ObjOut               - DC sensitivity analysis object with sensitivity
+%                          analysis solution
 
     if nargin < 2
-        fprintf(2, 'QSSsens.solve: not enough arguments\n');
-        help('QSSsens');
+        fprintf(2, 'dcsens.solve: not enough arguments\n');
+        help('dcsens');
         return;
     end
     
-    if 2 == nargin % (stateoutputs, QSSsensboj)
-        QSSsensobj = adjoint;
+    if 2 == nargin % (stateoutputs, dcsensboj)
+        dcsensobj = adjoint;
         adjoint = 0;
     end
 
-    if 1 == nargin % (QSSsensobj)
-        QSSsensobj = stateoutputs;
+    if 1 == nargin % (dcsensobj)
+        dcsensobj = stateoutputs;
         adjoint = 0;
         stateoutputs = [];
     end
 
-    DAE = QSSsensobj.DAE;
+    DAE = dcsensobj.DAE;
 
     if 0 == sum(size(stateoutputs))
         % plot DAE outputs
         C = feval(DAE.C, DAE);
-        QSSsensobj.onames = feval(DAE.outputnames, DAE);
+        dcsensobj.onames = feval(DAE.outputnames, DAE);
     else % plot state outputs specified in stateoutputs
         % set up C, onames
         nunks = feval(DAE.nunks, DAE); 
@@ -289,134 +289,134 @@ function ObjOut = solve(stateoutputs, adjoint, QSSsensobj)
         for i=1:length(varidxs)
             C(i,varidxs(i)) = 1; 
         end
-        QSSsensobj.onames = feval(stateoutputs.OutputNames, stateoutputs);
+        dcsensobj.onames = feval(stateoutputs.OutputNames, stateoutputs);
     end
 
-    Gf = QSSsensobj.Gf;
-    Sf = QSSsensobj.Sf;
+    Gf = dcsensobj.Gf;
+    Sf = dcsensobj.Sf;
 
     if 0 == adjoint % direct sensitivities
-        QSSsensobj.Sx = - Gf \ Sf;
-        QSSsensobj.Sy = C*QSSsensobj.Sx;
-		if strcmp(QSSsensobj.parmORinputFlag, 'input')
+        dcsensobj.Sx = - Gf \ Sf;
+        dcsensobj.Sy = C*dcsensobj.Sx;
+		if strcmp(dcsensobj.parmORinputFlag, 'input')
 			% FIXME: 20160128 neglecting matrix D, because of the way outputs are supported now
-			% QSSsensobj.Sy = QSSsensobj.Sy + QSSsensobj.D;
+			% dcsensobj.Sy = dcsensobj.Sy + dcsensobj.D;
 		end
-        QSSsensobj.lastSolveType = 1; % direct
-        QSSsensobj.z = []; % valid only after adjoint solve
+        dcsensobj.lastSolveType = 1; % direct
+        dcsensobj.z = []; % valid only after adjoint solve
     else % adjoint sensitivities
-        QSSsensobj.z = - (Gf') \ (C');
-        QSSsensobj.Sy = QSSsensobj.z' * Sf;
-		if strcmp(QSSsensobj.parmORinputFlag, 'input')
+        dcsensobj.z = - (Gf') \ (C');
+        dcsensobj.Sy = dcsensobj.z' * Sf;
+		if strcmp(dcsensobj.parmORinputFlag, 'input')
 			% FIXME: 20160128 neglecting matrix D, because of the way outputs are supported now
-			% QSSsensobj.Sy = QSSsensobj.Sy + QSSsensobj.D;
+			% dcsensobj.Sy = dcsensobj.Sy + dcsensobj.D;
 		end
-        QSSsensobj.lastSolveType = 2; % adjoint
-        QSSsensobj.Sx = []; % valid only after direct solve
+        dcsensobj.lastSolveType = 2; % adjoint
+        dcsensobj.Sx = []; % valid only after direct solve
     end
 
-    ObjOut = QSSsensobj;
+    ObjOut = dcsensobj;
 end % end solve
 
-function sol = getSolution(QSSsensobj)
-%function sol = getSolution(QSSsensobj)
-%This function gathers the noise analysis solution from a QSS sensitivity
+function sol = getSolution(dcsensobj)
+%function sol = getSolution(dcsensobj)
+%This function gathers the noise analysis solution from a DC sensitivity
 %analysis object.
 %INPUT args:
-%   QSSsensobj      - QSS sensitivity analysis object
+%   dcsensobj       - DC sensitivity analysis object
 %OUTPUT:
 %   sol             - solution of sensitivity analysis
 
-    if (QSSsensobj.lastSolveType == 1)
+    if (dcsensobj.lastSolveType == 1)
         sol.SolutionType = 'Direct';
-        sol.Sx = QSSsensobj.Sx;
-        sol.Sy = QSSsensobj.Sy;
-        sol.Sf = QSSsensobj.Sf;
-		if strcmp(QSSsensobj.parmORinputFlag, 'parm')
-			sol.ParmObj = QSSsensobj.ParmObj;
-		else % if strcmp(QSSsensobj.parmORinputFlag, 'input')
-        	sol.D = QSSsensobj.D;
-			sol.InputObj = QSSsensobj.InputObj;
+        sol.Sx = dcsensobj.Sx;
+        sol.Sy = dcsensobj.Sy;
+        sol.Sf = dcsensobj.Sf;
+		if strcmp(dcsensobj.parmORinputFlag, 'parm')
+			sol.ParmObj = dcsensobj.ParmObj;
+		else % if strcmp(dcsensobj.parmORinputFlag, 'input')
+        	sol.D = dcsensobj.D;
+			sol.InputObj = dcsensobj.InputObj;
 		end
-    elseif (QSSsensobj.lastSolveType == 2)
+    elseif (dcsensobj.lastSolveType == 2)
         sol.SolutionType = 'Adjoint';
-        sol.Sy = QSSsensobj.Sy;
-        sol.z = QSSsensobj.z;
-        sol.Sf = QSSsensobj.Sf;
-		if strcmp(QSSsensobj.parmORinputFlag, 'parm')
-			sol.ParmObj = QSSsensobj.ParmObj;
-		else % if strcmp(QSSsensobj.parmORinputFlag, 'input')
-        	sol.D = QSSsensobj.D;
-			sol.InputObj = QSSsensobj.InputObj;
+        sol.Sy = dcsensobj.Sy;
+        sol.z = dcsensobj.z;
+        sol.Sf = dcsensobj.Sf;
+		if strcmp(dcsensobj.parmORinputFlag, 'parm')
+			sol.ParmObj = dcsensobj.ParmObj;
+		else % if strcmp(dcsensobj.parmORinputFlag, 'input')
+        	sol.D = dcsensobj.D;
+			sol.InputObj = dcsensobj.InputObj;
 		end
     else 
-        fprintf('QSSsens: run solve() first.\n');
+        fprintf('dcsens: run solve() first.\n');
     end
 end % end of getSolution
 
-function print(QSSsensobj)
-%function print(QSSsensobj)
-    if (QSSsensobj.lastSolveType == 1)
+function print(dcsensobj)
+%function print(dcsensobj)
+    if (dcsensobj.lastSolveType == 1)
         SolutionType = 'Direct';
-    elseif (QSSsensobj.lastSolveType == 2)
+    elseif (dcsensobj.lastSolveType == 2)
         SolutionType = 'Adjoint';
     else 
-        fprintf('QSSsens: run solve() first.\n');
+        fprintf('dcsens: run solve() first.\n');
 		return;
     end
 
-	if strcmp(QSSsensobj.parmORinputFlag, 'parm')
-		names = QSSsensobj.ParmObj.parmnames;
-		vals = QSSsensobj.ParmObj.ParmVals(QSSsensobj.ParmObj, QSSsensobj.DAE);
-	else % if strcmp(QSSsensobj.parmORinputFlag, 'input')
-		names = QSSsensobj.InputObj.inputnames;
-		vals = QSSsensobj.InputObj.InputVals(QSSsensobj.InputObj, QSSsensobj.DAE);
+	if strcmp(dcsensobj.parmORinputFlag, 'parm')
+		names = dcsensobj.ParmObj.parmnames;
+		vals = dcsensobj.ParmObj.ParmVals(dcsensobj.ParmObj, dcsensobj.DAE);
+	else % if strcmp(dcsensobj.parmORinputFlag, 'input')
+		names = dcsensobj.InputObj.inputnames;
+		vals = dcsensobj.InputObj.InputVals(dcsensobj.InputObj, dcsensobj.DAE);
 	end
 
-	for c = 1:length(QSSsensobj.onames)
-		oname = QSSsensobj.onames{c};
+	for c = 1:length(dcsensobj.onames)
+		oname = dcsensobj.onames{c};
 		fprintf('%s Sensitivities of output: %s\n', SolutionType, oname);
 		fprintf('Name                 Value   Sensitivity\n');
 		for d = 1:length(names)
 			name = names{d};
 			val = vals{d};
 			spaces = repmat(' ', 1, 15-length(name)); % align values/sensitivities, works even when name is longer than 15.
-			sensitivity = QSSsensobj.Sy(c, d);
+			sensitivity = dcsensobj.Sy(c, d);
 			fprintf('%s%s%+.4e   %+.4e\n', name, spaces, val, full(sensitivity));
 		end
 		fprintf('\n');
 	end
-end % end QSSsens print
+end % end dcsens print
 
-function plot(QSSsensobj)
-%function plot(QSSsensobj)
+function plot(dcsensobj)
+%function plot(dcsensobj)
     % TODO: for each output, make a bar chart of the nonzero sensitivities wrt the
     % given parms in decreasing order. If the max/min ratio of what's being plotted
     % is > 100 (eyeball sensitivity), use a log scale for y.
     % you can label the bar chart like this:
     % bar([3 4 5])
     % set(gca,'XTickLabel',{'me','myself','&I'}) 
-    if (QSSsensobj.lastSolveType == 1)
+    if (dcsensobj.lastSolveType == 1)
         SolutionType = 'Direct';
-    elseif (QSSsensobj.lastSolveType == 2)
+    elseif (dcsensobj.lastSolveType == 2)
         SolutionType = 'Adjoint';
     else 
-        fprintf('QSSsens: run solve() first.\n');
+        fprintf('dcsens: run solve() first.\n');
 		return;
     end
 
-	if strcmp(QSSsensobj.parmORinputFlag, 'parm')
-		names = QSSsensobj.ParmObj.parmnames;
-		vals = QSSsensobj.ParmObj.ParmVals(QSSsensobj.ParmObj, QSSsensobj.DAE);
-	else % if strcmp(QSSsensobj.parmORinputFlag, 'input')
-		names = QSSsensobj.InputObj.inputnames;
-		vals = QSSsensobj.InputObj.InputVals(QSSsensobj.InputObj, QSSsensobj.DAE);
+	if strcmp(dcsensobj.parmORinputFlag, 'parm')
+		names = dcsensobj.ParmObj.parmnames;
+		vals = dcsensobj.ParmObj.ParmVals(dcsensobj.ParmObj, dcsensobj.DAE);
+	else % if strcmp(dcsensobj.parmORinputFlag, 'input')
+		names = dcsensobj.InputObj.inputnames;
+		vals = dcsensobj.InputObj.InputVals(dcsensobj.InputObj, dcsensobj.DAE);
 	end
 
-	for c = 1:length(QSSsensobj.onames)
+	for c = 1:length(dcsensobj.onames)
 		figure; 
-		oname = QSSsensobj.onames{c};
-		sensitivityVec = full(QSSsensobj.Sy(c, :));
+		oname = dcsensobj.onames{c};
+		sensitivityVec = full(dcsensobj.Sy(c, :));
 		abssensitivityVec = abs(sensitivityVec);
 		if (max(abssensitivityVec) > 1000*min(abssensitivityVec(abssensitivityVec>0)))
 			hb = bar(abssensitivityVec);
@@ -435,4 +435,4 @@ function plot(QSSsensobj)
 		set(gca,'XTick', 1:length(names));
 		set(gca,'XTickLabel', names);
 	end
-end % end QSSsens plot
+end % end dcsens plot

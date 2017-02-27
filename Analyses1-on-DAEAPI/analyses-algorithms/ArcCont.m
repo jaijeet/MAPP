@@ -202,7 +202,7 @@ function ArcContObj = ArcCont(g_h, dg_dxLambda_h, g_args, ArcContParms)
 	ArcContObj.getsolution = @getsolution;
 	ArcContObj.getsolutionUsage='[spts, yvals, finalSol]=feval(ArcContObj.getsolution, ArcContObj)';
 	% for debugging
-	if ArcContParms.dbglvl > 1; 
+	if ArcContParms.dbglvl > 1
 		ArcContObj.tangent_function = @tangent_function;
 		ArcContObj.g_at_fixed_lambda = @g_at_fixed_lambda;
 		ArcContObj.dgdx_at_fixed_lambda = @dgdx_at_fixed_lambda;
@@ -246,19 +246,16 @@ function [tangent, success, J] = tangent_function(y, ArcContObj)
 end % tangent_function
 
 function out = g_at_fixed_lambda(x, NRg_args)
-	out = feval(NRg_args.ArcContObj.g_h, [x; NRg_args.lambda], ...
-                                                NRg_args.ArcContObj.g_args);
+	out = feval(NRg_args.ArcContObj.g_h, [x; NRg_args.lambda], NRg_args.ArcContObj.g_args);
 end % g_at_fixed_lambda
 
 function Jout = dgdx_at_fixed_lambda(x, NRg_args)
-	J = feval(NRg_args.ArcContObj.dg_dxLambda_h, [x; NRg_args.lambda], ...
-                                                    NRg_args.ArcContObj.g_args);
+	J = feval(NRg_args.ArcContObj.dg_dxLambda_h, [x; NRg_args.lambda], NRg_args.ArcContObj.g_args);
 	Jout = J(:, 1:(end-1));
 end % dgdx_at_fixed_lambda
 
 function [newy, news, iters, success] = MPPINR_corrector(s, y, args)
-	[newy, iters, success] = NR(args.g_h, args.dg_dxLambda_h, y, ...
-                                                args.g_args, args.NRparms);
+	[newy, iters, success] = NR(args.g_h, args.dg_dxLambda_h, y, args.g_args, args.NRparms); % will need AFobj update
 	if success ~= 1
 		news = [];
 		if args.dbglvl >= 1
@@ -326,14 +323,20 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 	% run NR at lambda=lambdaStart to find the initial solution
 	NRg_args.lambda = ArcContObj.ArcContParms.StartLambda; 
     NRg_args.ArcContObj = ArcContObj;
-	[initsol, iters, success] = NR(@g_at_fixed_lambda, ...
-                    @dgdx_at_fixed_lambda, initguess, ...
-					NRg_args, ArcContObj.ArcContParms.NRparms);
+	[initsol, iters, success] = NR(@g_at_fixed_lambda, @dgdx_at_fixed_lambda, initguess, NRg_args, ArcContObj.ArcContParms.NRparms); % AFobj change needed
 	if success ~= 1
-		error(sprintf('ArcCont: initial NR at lambda=%g failed', ...
-				NRg_args.lambda));
+		error(sprintf('ArcCont: initial NR at lambda=%g failed', NRg_args.lambda));
 	end
 	totNRiters = totNRiters + iters;
+
+    % use NR's xscaling feature to get NR to scale the lambda component for convergence checks. May be useful if lambda is very big or very small compared to x.
+    xscaling = ArcContObj.ArcContParms.NRparms.xscaling;
+    if 1 == length(xscaling) 
+        xscaling = xscaling*ones(length(initguess)+1, 1);
+    else % already a vector
+        xscaling(end+1,1) = ArcContObj.ArcContParms.StopLambda;
+    end
+    ArcContObj.ArcContParms.NRparms.xscaling = xscaling;
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% find and set the initial prior tangent vector
@@ -350,14 +353,10 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 	saved_dotprod = ArcContObj.ArcContParms.dotprod_abstol;
 	ArcContObj.ArcContParms.dotprod_abstol = 1e-6;
     if ArcContObj.ArcContParms.dbglvl >= 2
-	    [tangent, success, J] = tangent_function([initsol; ...
-                    ArcContObj.ArcContParms.StartLambda], ArcContObj);
-        ArcContObj.priorDetSign = sign(det([J; tangent'])); % used
-        % by ArcContDAE::DAEupdateFuncPerTimepoint to notify if a bifurcation
-        % has been stepped over.
+	    [tangent, success, J] = tangent_function([initsol; ArcContObj.ArcContParms.StartLambda], ArcContObj); % may need AFobj change
+        ArcContObj.priorDetSign = sign(det([J; tangent'])); % used by ArcContDAE::DAEupdateFuncPerTimepoint to notify if a bifurcation has been stepped over.
     else
-	    [tangent, success] = tangent_function([initsol; ...
-                    ArcContObj.ArcContParms.StartLambda], ArcContObj);
+	    [tangent, success] = tangent_function([initsol; ArcContObj.ArcContParms.StartLambda], ArcContObj); % may need AFobj change
     end
 	if success ~= 1
 		error('ArcCont: tangent_function failed at starting point.');
@@ -376,8 +375,7 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 	if n <= 0
 		error('ArcCont: n <= 0');
 	end
-	ArcContObj.contODE = ArcContDAE('contODE', n, ...
-                                            @tangent_function,   ArcContObj);
+	ArcContObj.contODE = ArcContDAE('contODE', n, @tangent_function,   ArcContObj);
 	ArcContObj.contODE.funcargs = ArcContObj; % ugly hack needed because ^^^ 
                                               % this changed in the above call
 
@@ -390,7 +388,7 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 	tranparms.StepControlParms.doStepControl = 1; % step control
 
 	% tranparms.NRparms may also need special settings
-	tranparms.correctorFunc = @MPPINR_corrector;
+	tranparms.correctorFunc = @MPPINR_corrector; % will need AFobj update
 	correctorFuncArgs.g_h = ArcContObj.g_h;
 	correctorFuncArgs.dg_dxLambda_h = ArcContObj.dg_dxLambda_h;
 	correctorFuncArgs.g_args = ArcContObj.g_args;
@@ -419,9 +417,7 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 
 	%tranparms.trandbglvl = 3;
 
-	arclenTrans = LMS(ArcContObj.contODE, FEparms, tranparms); % FE with
-                  % MPPI corrector and a stop func (supplied through
-                  % tranparms)
+	arclenTrans = LMS(ArcContObj.contODE, FEparms, tranparms); % FE with MPPI corrector and a stop func (supplied through tranparms)
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% choose an initial s-step
@@ -432,19 +428,14 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% run arclength continuation and get the solution
-	arclenTrans = feval(arclenTrans.solve, arclenTrans, ...
-		[initsol; ArcContObj.ArcContParms.StartLambda], ...
-		ArcContObj.ArcContParms.StartLambda, initialstep); % no tstop=>will
-                                                           % use stopFunc
+	arclenTrans = feval(arclenTrans.solve, arclenTrans, [initsol; ArcContObj.ArcContParms.StartLambda], ArcContObj.ArcContParms.StartLambda, initialstep); % no tstop=>will
+                                                                                                                                                           % use stopFunc
 	[spts, yvals] = feval(arclenTrans.getsolution, arclenTrans);
 	totNRiters = totNRiters + arclenTrans.totNRiters;
 
-    % check if normal termination, or if MaxArcLength or Max/MinLambda
-    % exceeded
+    % check if normal termination, or if MaxArcLength or Max/MinLambda exceeded
     last_s = spts(end); last_lambda = yvals(end, end);
-    abnormal_termination = (last_s >= ArcContObj.ArcContParms.MaxArcLength) ...
-                    || (last_lambda >= ArcContObj.ArcContParms.MaxLambda) ...
-                    ||  (last_lambda <= ArcContObj.ArcContParms.MinLambda);
+    abnormal_termination = (last_s >= ArcContObj.ArcContParms.MaxArcLength) || (last_lambda >= ArcContObj.ArcContParms.MaxLambda) ||  (last_lambda <= ArcContObj.ArcContParms.MinLambda);
 
     if ~abnormal_termination
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -452,11 +443,8 @@ function objOut = ArcContTracking(ArcContObj, initguess)
         % lambda=StopLambda, then run NR to find the solution
         l2 = yvals(end,end); x2 = yvals(1:(end-1),end);
         l1 = yvals(end,end-1); x1 = yvals(1:(end-1),end-1);
-        m = (ArcContObj.ArcContParms.StopLambda > ...
-                           ArcContObj.ArcContParms.StartLambda)*2 - 1; % 1 or -1
-        if m*(l2-ArcContObj.ArcContParms.StopLambda) < 0 || ...
-                m*(l1-ArcContObj.ArcContParms.StopLambda) >= 0 ...
-                || m*(l2 - l1) <= 0
+        m = (ArcContObj.ArcContParms.StopLambda > ArcContObj.ArcContParms.StartLambda)*2 - 1; % 1 or -1
+        if m*(l2-ArcContObj.ArcContParms.StopLambda) < 0 || m*(l1-ArcContObj.ArcContParms.StopLambda) >= 0 || m*(l2 - l1) <= 0
             error('ArcCont: l2 < StopLambda || l1 >= StopLambda || l2-l1 <= 0');
         end
         % linear interpolation to find NR initguess
@@ -467,11 +455,17 @@ function objOut = ArcContTracking(ArcContObj, initguess)
         NRg_args.lambda = ArcContObj.ArcContParms.StopLambda; 
         NRg_args.ArcContObj = ArcContObj;
         % FIXME: could change NRparms here, eg, increase maxiter
-        [finalSol, iters, success] = NR(@g_at_fixed_lambda, ...
-                        @dgdx_at_fixed_lambda, finalsolguess, ...
-                        NRg_args, ArcContObj.ArcContParms.NRparms);
+        %
+        % shorten xscaling vector if it is already set up
+        xscaling = ArcContObj.ArcContParms.NRparms.xscaling;
+        if length(xscaling) == length(finalsolguess) + 1
+            xscaling = xscaling(1:end-1);
+        end
+        ArcContObj.ArcContParms.NRparms.xscaling = xscaling;
+        [finalSol, iters, success] = NR(@g_at_fixed_lambda, @dgdx_at_fixed_lambda, finalsolguess, NRg_args, ArcContObj.ArcContParms.NRparms); % needs change for AFobj
         if success ~= 1
-            error('ArcCont: final NR at lambda=StopLambda failed');
+            fprintf(2, 'ArcCont: final NR at lambda=StopLambda failed; returning solution at last lambda');
+            finalSol = finalsolguess;
         end
         totNRiters = totNRiters + iters;
     else % abnormal_termination
@@ -491,7 +485,7 @@ function objOut = ArcContTracking(ArcContObj, initguess)
 	ArcContObj.sol.finalSol = finalSol;
 
 	objOut = ArcContObj;
-end % solve
+end % ArcContTracking / solve
 
 function [spts, yvals, finalSol] = getsolution(ArcContObj)
 	if 1 == ArcContObj.solve_successful

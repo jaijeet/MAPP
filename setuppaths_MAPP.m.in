@@ -9,9 +9,12 @@ addpath(sprintf('%s/@VECVALDER@/vv4-tests', basedir));
 addpath(sprintf('%s/@VECVALDER@/vv4-MATLAB', basedir));
 if ~strcmp('@VAPP@', '')
     addpath(sprintf('%s/@VAPP@', basedir));
-    addpath(sprintf('%s/@VAPP@/backend'                , basedir));
     addpath(sprintf('%s/@VAPP@/frontend'               , basedir));
-    addpath(sprintf('%s/@VAPP@/frontend/VALint_rules'  , basedir));
+    addpath(sprintf('%s/@VAPP@/backend'                , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/IrVisitor'      , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/Ms'             , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/AstVisitor'     , basedir));
+    addpath(sprintf('%s/@VAPP@/backend/IrNode'         , basedir));
     addpath(sprintf('%s/@VAPP@/backend/utils'          , basedir));
     addpath(sprintf('%s/@VAPP@/backend/print_templates', basedir));
     addpath(sprintf('%s/@VAPP@/doc'                    , basedir));

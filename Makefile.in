@@ -274,12 +274,11 @@ $(MAPPTOP)/locallinks-are-current: $(MAPPLOCALLINKSDIR)
 	    cd $(MAPPLOCALLINKSDIR)/$(VAPP); \
 		if [ -e $(MAPPTOP)/$(VAPP)/00-README ]; then ln -s $(MAPPTOP)/$(VAPP)/../0-README .; fi; \
 		if [ -e $(MAPPTOP)/$(VAPP)/va2modspec.m ]; then ln -s $(MAPPTOP)/$(VAPP)/va2modspec.m .; fi; \
-		if [ -e $(MAPPTOP)/$(VAPP)/valint.m ]; then ln -s $(MAPPTOP)/$(VAPP)/valint.m .; fi; \
+		if [ -e $(MAPPTOP)/$(VAPP)/start_VAPP.m ]; then ln -s $(MAPPTOP)/$(VAPP)/start_VAPP.m .; fi; \
 		if [ -e $(MAPPTOP)/$(VAPP)/frontend ]; then mkdir frontend; fi; \
 		if [ -e $(MAPPTOP)/$(VAPP)/backend ]; then mkdir backend; fi; \
 		if [ -e $(MAPPTOP)/$(VAPP)/doc ]; then mkdir doc; fi; \
-		if [ -e $(MAPPTOP)/$(VAPP)/examples ]; then mkdir examples; fi; \
-		if [ -e $(MAPPTOP)/$(VAPP)/examples ]; then mkdir va_models; fi; \
+		#if [ -e $(MAPPTOP)/$(VAPP)/reference_models ]; then mkdir reference_models; fi; \
 		for i in `(cd $(MAPPTOP)/$(VAPP)/backend; find . -type d )`; do \
 				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/backend/$$i; \
 				cd $(MAPPTOP)/$(VAPP)/backend/$$i; DOTMFILES=`echo *.*`; \
@@ -296,32 +295,24 @@ $(MAPPTOP)/locallinks-are-current: $(MAPPLOCALLINKSDIR)
 					ln -s $(MAPPTOP)/$(VAPP)/frontend/$$i/*.* .; \
 				fi; \
         	done;\
-		for i in `(cd $(MAPPTOP)/$(VAPP)/examples; find . -type d )`; do \
-				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/examples/$$i; \
-				cd $(MAPPTOP)/$(VAPP)/examples/$$i; DOTMFILES=`echo *.m`; \
-				if [ "$$DOTMFILES" != '*.m' ]; then \
-					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/examples/$$i; \
-					ln -s $(MAPPTOP)/$(VAPP)/examples/$$i/*.m .; \
-				fi; \
-        	done;\
-		for i in `(cd $(MAPPTOP)/$(VAPP)/va_models; find . -type d )`; do \
-				mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
-				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.va`; \
-				if [ "$$DOTMFILES" != '*.va' ]; then \
-					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
-					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.va .; \
-				fi; \
-				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.vams`; \
-				if [ "$$DOTMFILES" != '*.vams' ]; then \
-					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
-					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.vams .; \
-				fi; \
-				cd $(MAPPTOP)/$(VAPP)/va_models/$$i; DOTMFILES=`echo *.h`; \
-				if [ "$$DOTMFILES" != '*.h' ]; then \
-					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/va_models/$$i; \
-					ln -s $(MAPPTOP)/$(VAPP)/va_models/$$i/*.h .; \
-				fi; \
-        	done;\
+		#for i in `(cd $(MAPPTOP)/$(VAPP)/reference_models; find . -type d )`; do \
+		#		mkdir -p $(MAPPLOCALLINKSDIR)/$(VAPP)/reference_models/$$i; \
+		#		cd $(MAPPTOP)/$(VAPP)/reference_models/$$i; DOTMFILES=`echo *.va`; \
+		#		if [ "$$DOTMFILES" != '*.va' ]; then \
+		#			cd $(MAPPLOCALLINKSDIR)/$(VAPP)/reference_models/$$i; \
+		#			ln -s $(MAPPTOP)/$(VAPP)/reference_models/$$i/*.va .; \
+		#		fi; \
+		#		cd $(MAPPTOP)/$(VAPP)/reference_models/$$i; DOTMFILES=`echo *.vams`; \
+		#		if [ "$$DOTMFILES" != '*.vams' ]; then \
+		#			cd $(MAPPLOCALLINKSDIR)/$(VAPP)/reference_models/$$i; \
+		#			ln -s $(MAPPTOP)/$(VAPP)/reference_models/$$i/*.vams .; \
+		#		fi; \
+		#		cd $(MAPPTOP)/$(VAPP)/reference_models/$$i; DOTMFILES=`echo *.h`; \
+		#		if [ "$$DOTMFILES" != '*.h' ]; then \
+		#			cd $(MAPPLOCALLINKSDIR)/$(VAPP)/reference_models/$$i; \
+		#			ln -s $(MAPPTOP)/$(VAPP)/reference_models/$$i/*.h .; \
+		#		fi; \
+        	#done;\
 		cd $(MAPPTOP)/$(VAPP)/doc; DOTMFILES=`echo *.m`; \
 				if [ "$$DOTMFILES" != '*.m' ]; then \
 					cd $(MAPPLOCALLINKSDIR)/$(VAPP)/doc; \

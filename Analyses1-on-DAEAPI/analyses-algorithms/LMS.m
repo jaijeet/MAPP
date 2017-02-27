@@ -216,6 +216,11 @@ function LMSobj = LMS(DAE, TRmethod, tranparms) % DAE=DAEAPIv6.2
     end
 end % LMS "constructor"
 
+
+
+
+
+
 function LMSout = LMSupdateDAE(DAE, LMSobj)
 %function LMSout = LMSupdateDAE(DAE, LMSobj)
 %(this is a private function of LMS, but can be accessed via LMSobj.updateDAE)
@@ -234,14 +239,27 @@ function LMSout = LMSupdateDAE(DAE, LMSobj)
     LMSout = LMSobj;
 end % LMSupdateDAE
 
+
+
+
+
+
+
 function out = name(LMSobj)
 %function out = name(LMSobj)
 %  Returns the name of the LMS object.
     out = sprintf('%s LMS solver', LMSobj.TRmethod.name);
 end % name
 
-function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
-                            tstop, store_Jacobians)
+
+
+
+
+
+
+
+
+function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, tstop, store_Jacobians)
 %function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, tstop,
 %                                store_Jacobians)
 %(this is a private function of LMS, but can be accessed as LMSobj.solve)
@@ -355,7 +373,7 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
         if LMSobj.tranparms.trandbglvl > 1
             fprintf(1,sprintf('LMS: finished first %d step(s) using BE\n', p-1));
         end
-    else
+    else % p > 1
         t = tstart;
         LMSobj.tpts = []; LMSobj.vals = []; % wipe out any previous simulation data
         LMSobj.tpts(1) = t;
@@ -368,7 +386,7 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
             LMSobj.Gs{end+1} = gee;
             LMSobj.Gus{end+1} = geeu;
         end
-    end
+    end % p > 1
 
     do_preallocate = 0; % 1: pre-allocate LMSobj.tpts and LMSobj.vals
                     % pre-allocation seems to actually slow things
@@ -429,7 +447,9 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
         last_pp1_ts(2:(p+1)) = LMSobj.tpts(LMSobj.timeptidx:-1:LMSobj.timeptidx-p+1);
         %
         LMSobj.currentalphas = feval(LMSobj.TRmethod.alphasfunc, last_pp1_ts);
+        % LMSobj.dcurrentalphas = feval(LMSobj.TRmethod.dalphasfunc, last_pp1_ts); % for homotopy (computed later, only if needed)
         LMSobj.currentbetas = feval(LMSobj.TRmethod.betasfunc, last_pp1_ts);
+        % LMSobj.dcurrentbetas = feval(LMSobj.TRmethod.dbetasfunc, last_pp1_ts); % for homotopy (computed later, only if needed)
         %
         initNRguess = LMSobj.vals(:, LMSobj.timeptidx); % simplest kind of predictor: value at previous timepoint
         LMSobj.tnew = tnew;
@@ -440,7 +460,9 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
             % TODO: Consider a better name to replace .LMS_add_on
             LMSobj.AFobj.LMS_add_on.TRmethod.order = LMSobj.TRmethod.order;
             LMSobj.AFobj.LMS_add_on.currentalphas = LMSobj.currentalphas;
+            % LMSobj.AFobj.LMS_add_on.dcurrentalphas = LMSobj.dcurrentalphas; % for homotopy (computed later, only if needed)
             LMSobj.AFobj.LMS_add_on.currentbetas = LMSobj.currentbetas;
+            % LMSobj.AFobj.LMS_add_on.dcurrentbetas = LMSobj.dcurrentbetas; % for homotopy (computed later, only if needed)
             LMSobj.AFobj.LMS_add_on.tnew = LMSobj.tnew;
             LMSobj.AFobj.LMS_add_on.tpts = LMSobj.tpts;
             LMSobj.AFobj.LMS_add_on.vals = LMSobj.vals;
@@ -449,14 +471,13 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
             % bichen: LMS speedup switch
             if doSpeedup
                 LMSobj.AFobj.LMS_add_on.fqHistory = fqHistory;
-                [xnew, iters, success, AFobjPreComputedStuff]=NR(LMSobj.AFobj, LMSobj.tranparms.NRparms, initNRguess);
+                [xnew, iters, success, AFobjPreComputedStuff] = NR(LMSobj.AFobj, LMSobj.tranparms.NRparms, initNRguess);
                 fqterm = AFobjPreComputedStuff.fqterm;
             else
-                [xnew, iters, success]=NR(LMSobj.AFobj, LMSobj.tranparms.NRparms, initNRguess);
+                [xnew, iters, success] = NR(LMSobj.AFobj, LMSobj.tranparms.NRparms, initNRguess);
             end
         else
-            [xnew, iters, success]=NR(@LMSfuncToSolve, @dLMSfuncToSolve, ...
-                        initNRguess, LMSobj, LMSobj.tranparms.NRparms);
+            [xnew, iters, success] = NR(@LMSfuncToSolve, @dLMSfuncToSolve, initNRguess, LMSobj, LMSobj.tranparms.NRparms);
         end
         totNRiters = totNRiters + iters;
         %
@@ -466,8 +487,7 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
             % if NR succeeded and a corrector is available, apply it to update xnew
             LMSobj.tranparms.correctorFuncArgs.told = t;
             LMSobj.tranparms.correctorFuncArgs.xold = LMSobj.vals(:, LMSobj.timeptidx);
-            [xnewer, tnewer, iters, success] = feval(LMSobj.tranparms.correctorFunc, tnew, xnew, ...
-                LMSobj.tranparms.correctorFuncArgs);
+            [xnewer, tnewer, iters, success] = feval(LMSobj.tranparms.correctorFunc, tnew, xnew, LMSobj.tranparms.correctorFuncArgs);
             totNRiters = totNRiters + iters;
             if 1 == success
                 xnew = xnewer;
@@ -493,15 +513,82 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
 
                 if (delta < LMSobj.tranparms.stepControlParms.absMinStep) ...
                    || ((tstop_specified == 1) && (delta < LMSobj.tranparms.stepControlParms.relMinStep*abs(tstop-tstart)))
-                    if LMSobj.tranparms.trandbglvl > -1
-                        fprintf(2,'minimum allowed timestep (%g) reached, aborting transient at t=%g.\n', ...
-                                  max(LMSobj.tranparms.stepControlParms.absMinStep, ...
-                                      tstop_specified*LMSobj.tranparms.stepControlParms.relMinStep*abs(tstop-tstart)), ...
-                                tnew);
+                    if 1 == LMSobj.tranparms.homotopyAsLastResort
+                        %{
+	                    ACobj = ArcCont([], [], []); % empty ArcCont object, but has default parms defined
+                    	parms = ACobj.ArcContParms;
+                        ArcContAnalObj.parms.StartLambda = startLambda;
+                        ArcContAnalObj.parms.StopLambda = stopLambda;
+                        ArcContAnalObj.parms.initDeltaLambda = initLambdaStep;
+                        %}
+                        LMSobj.realtnew = LMSobj.tnew;
+                        warning('last ditch attempt: using homotopy after minimum timestep reached');
+                        if 1 == LMSobj.timeptidx  % ie, tnew is the first step after the initial condition
+                            fprintf(2,'homotopy cannot be used for the first transient simulation step');
+                            if LMSobj.tranparms.trandbglvl > -1
+                                fprintf(2,'minimum allowed timestep (%g) reached at first timestep; aborting transient at t=%g.\n', ...
+                                          max(LMSobj.tranparms.stepControlParms.absMinStep, ...
+                                              tstop_specified*LMSobj.tranparms.stepControlParms.relMinStep*abs(tstop-tstart)), tnew);
+                            end
+                            LMSobj.solvalid=0;
+                            LMSobjOUT = LMSobj;
+                            return;
+                        end
+	                    ACobj = ArcCont([], [], []); % empty ArcCont object, but has default parms defined
+                    	ACobj.ArcContParms.NRparms = LMSobj.tranparms.NRparms; % important?
+                        ACobj.ArcContParms.StartLambda = 0; 
+                        ACobj.ArcContParms.StopLambda = 1e-4; % TODO: find some way to find a decent value for this scale
+                        ACobj.ArcContParms.initDeltaLambda = 0.01e-4;
+                        ACobj.ArcContParms.maxDeltaLambda = 0.05e-4;
+
+                        LMSobj.ArcContParms = ACobj.ArcContParms;
+
+                        ArcContObj = ArcCont(@Arc_LMSfuncToSolve, @dArc_LMSfuncToSolve, LMSobj);
+                        initguess = LMSobj.vals(:, LMSobj.timeptidx);
+                        ArcContObj = feval(ArcContObj.solve, ArcContObj, initguess);
+                        if ArcContObj.solve_successful ~= 1
+                            if LMSobj.tranparms.trandbglvl > -1
+                                fprintf(2,'minimum allowed timestep (%g) reached and homotopy failed; aborting transient at t=%g.\n', ...
+                                          max(LMSobj.tranparms.stepControlParms.absMinStep, ...
+                                              tstop_specified*LMSobj.tranparms.stepControlParms.relMinStep*abs(tstop-tstart)), tnew);
+                            end
+                            LMSobj.solvalid=0;
+                            LMSobjOUT = LMSobj;
+                            unknames = feval(LMSobj.DAE.unknames, LMSobj.DAE);
+                            for i=1:length(unknames)
+                                figure();
+                                plot(ArcContObj.sol.yvals(end,:), ArcContObj.sol.yvals(i,:), '.-');
+                                grid on;
+                                xlabel('\lambda');
+                                ylabel(unknames{i});
+                                title(sprintf('homotopy output %s at t=%g', unknames{i}, LMSobj.tnew));
+                            end
+                            return;
+                        end
+                        %[spts, yvals, finalSol] = feval(ArcContObj.getsolution, ArcContObj);
+                        %xnew = finalSol;
+                        xnew = ArcContObj.sol.finalSol;
+                        LMSobj.solvalid=1;
+                        unknames = feval(LMSobj.DAE.unknames, LMSobj.DAE);
+                        for i=1:length(unknames)
+                            figure();
+                            plot(ArcContObj.sol.yvals(end,:), ArcContObj.sol.yvals(i,:), '.-');
+                            grid on;
+                            xlabel('\lambda');
+                            ylabel(unknames{i});
+                            title(sprintf('homotopy output %s at t=%g', unknames{i}, LMSobj.tnew));
+                        end
+                        % TODO: update totNRiters
+                    else
+                        if LMSobj.tranparms.trandbglvl > -1
+                            fprintf(2,'minimum allowed timestep (%g) reached, aborting transient at t=%g.\n', ...
+                                      max(LMSobj.tranparms.stepControlParms.absMinStep, ...
+                                          tstop_specified*LMSobj.tranparms.stepControlParms.relMinStep*abs(tstop-tstart)), tnew);
+                        end
+                        LMSobj.solvalid=0;
+                        LMSobjOUT = LMSobj;
+                        return;
                     end
-                    LMSobj.solvalid=0;
-                    LMSobjOUT = LMSobj;
-                    return;
                 end
                 continue;
             else
@@ -513,11 +600,10 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
         end
 
         if 1 == LMSobj.tranparms.stepControlParms.doStepControl
-            if iters >LMSobj.tranparms.stepControlParms.NRiterRange(2) 
+            if iters > LMSobj.tranparms.stepControlParms.NRiterRange(2) 
                 delta = delta/LMSobj.tranparms.stepControlParms.cutFactor;
                 if LMSobj.tranparms.trandbglvl > 1
-                    fprintf(2,'\tnext timestep cut to %g on account of taking %d>%d NR iterations\n', ...
-                    delta, iters, LMSobj.tranparms.stepControlParms.NRiterRange(2));
+                    fprintf(2,'\tnext timestep cut to %g on account of taking %d>%d NR iterations\n', delta, iters, LMSobj.tranparms.stepControlParms.NRiterRange(2));
                 end
                 if LMSobj.tranparms.trandbglvl > 0
                     fprintf(2,'|');
@@ -527,8 +613,7 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
             if iters < LMSobj.tranparms.stepControlParms.NRiterRange(1) 
                 newdelta = min(delta*LMSobj.tranparms.stepControlParms.increaseFactor, maxdelta);
                 if (LMSobj.tranparms.trandbglvl > 1) && (delta < maxdelta)
-                    fprintf(2,'\tnext timestep increased to %g on account of taking %d<%d NR iterations\n', ...
-                    newdelta, iters, LMSobj.tranparms.stepControlParms.NRiterRange(1));
+                    fprintf(2,'\tnext timestep increased to %g on account of taking %d<%d NR iterations\n', newdelta, iters, LMSobj.tranparms.stepControlParms.NRiterRange(1));
                 end
                 if (LMSobj.tranparms.trandbglvl > 0) && (delta < maxdelta)
                     fprintf(2,'\\');
@@ -687,8 +772,17 @@ function LMSobjOUT = LMStimestepping(LMSobj, xinitcond, tstart, tstep, ...
     LMSobj.solvalid = 1;
     LMSobj.totNRiters = totNRiters;
     LMSobjOUT = LMSobj;
-end
-% end of solve
+end % of LMStimeStepping
+
+
+
+
+
+
+
+
+
+
 
 
 function out = LMSfuncToSolve(x, LMSobj)
@@ -699,33 +793,33 @@ function out = LMSfuncToSolve(x, LMSobj)
     tnew = LMSobj.tnew;
     % the DAE is qdot(x) + f(x) + B*u(t) = 0 => qdot(x) = g(x,t)=-f(x)-B*u(t)
     % the LMS formula is: 
-    %   0 =   sum_i=0^{p} alpha_i q(x_{n-i}) 
-    %    - sum_i=0^{p} beta_i g(x_{n-i},t_{n-i})
-    %or 0 =   sum_i=0^{p} alpha_i q(x_{n-i}) 
-    %    + sum_i=0^{p} beta_i [f(x_{n-i}) + b(t_{n-i})]
+    %    0 =   sum_i=0^{p} alpha_i q(x_{n-i}) 
+    %          - sum_i=0^{p} beta_i g(x_{n-i},t_{n-i})
+    % or 0 =   sum_i=0^{p} alpha_i q(x_{n-i}) 
+    %          + sum_i=0^{p} beta_i [f(x_{n-i}) + b(t_{n-i})]
 
     ninputs = feval(DAE.ninputs, DAE);
     % current timepoint term
     if  ninputs > 0
-        unew = feval(DAE.utransient, tnew, DAE);
+        unew = feval(DAE.utransient, tnew, DAE); % homotopy: need DAE.d_utransient
     else
         unew = [];
     end
     if 1 == LMSobj.f_takes_u
         % DAE is d/dt q(x) + f(x, u(t)) = 0
-        fbterm = feval(DAE.f, x, unew, DAE);
+        fbterm = feval(DAE.f, x, unew, DAE); % homotopy: will use DAE.d_utransient
     else
         % DAE is d/dt q(x) + f(x) + B*u(t) = 0
         fbterm = feval(DAE.f, x, DAE);
         if ninputs > 0
-            fbterm = fbterm + LMSobj.B*unew;
+            fbterm = fbterm + LMSobj.B*unew; % homotopy: will use DAE.d_utransient
         end
     end
     if isfield(DAE, 'm') && isa(DAE.m, 'function_handle')
         nn = feval(DAE.nNoiseSources, DAE);
         fbterm = fbterm + feval(DAE.m, x, zeros(nn,1), DAE);
     end
-    out = alphas(1)*feval(DAE.q, x, DAE) + betas(1)*fbterm;
+    out = alphas(1)*feval(DAE.q, x, DAE) + betas(1)*fbterm; % homotopy: alpha/betas depend on tnew, their derivatives needed
 
     % terms for prior timepoints
     for i=2:(p+1)
@@ -757,13 +851,33 @@ function out = LMSfuncToSolve(x, LMSobj)
             out = out + betas(i)*fbterm;
         end
     end
-end
-% end of LMSfuncToSolve
+end % of LMSfuncToSolve
 
-function Jout = dLMSfuncToSolve(x, LMSobj)
+
+
+
+
+
+
+
+
+
+
+
+
+function [Jout, Jtn] = dLMSfuncToSolve(x, LMSobj)
+    if nargout > 1
+        compute_Jtn = 1;
+    else
+        compute_Jtn = 0;
+    end
     p = LMSobj.TRmethod.order;
     alphas = LMSobj.currentalphas; % length p
     betas = LMSobj.currentbetas; % length p
+    if 1 == compute_Jtn
+        dalphas = LMSobj.dcurrentalphas; % length p
+        dbetas = LMSobj.dcurrentbetas; % length p
+    end
     DAE = LMSobj.DAE;
     tnew = LMSobj.tnew;
     % the DAE is qdot(x) + f(x) + b(t) = 0 => qdot(x) = g(x,t)=-f(x)-b(t)
@@ -773,32 +887,112 @@ function Jout = dLMSfuncToSolve(x, LMSobj)
     %or 0 =   sum_i=0^{p} alpha_i q(x_{n-i}) 
     %    + sum_i=0^{p} beta_i [f(x_{n-i}) + b(t_{n-i})]
 
-    % current timepoint term
+    % current timepoint term (i = 0)
     %out = alphas(1)*feval(DAE.q, x, DAE) + ...
     %     betas(1)*(feval(DAE.f, x, DAE) + ...
     %            B*feval(DAE.utransient, tnew, DAE));
     ninputs = feval(DAE.ninputs, DAE);
-    % current timepoint term
-    if  ninputs > 0
+    % current timepoint term 
+    if ninputs > 0
         unew = feval(DAE.utransient, tnew, DAE);
+        if 1 == compute_Jtn
+            % hack to get u'(tnew) in the absence of analytical function for du(t)/dt
+            told = LMSobj.tpts(LMSobj.timeptidx);
+            uold = feval(DAE.utransient, told, DAE);
+            if tnew ~= told
+                dunew = (unew - uold)/(tnew-told);
+            else
+                dunew = 0; % value should not matter, since betas(.) (which include multiplication by h) should be zero.
+            end
+        end
     else
         unew = [];
     end
     if 1 == LMSobj.f_takes_u
         % DAE is d/dt q(x) + f(x, u(t)) = 0
         Jfterm = feval(DAE.df_dx, x, unew, DAE);
+        if 1 == compute_Jtn
+            fbterm = feval(DAE.f, x, unew, DAE); % homotopy: will use DAE.d_utransient
+            Jtnterm = feval(DAE.df_du, x, unew, DAE)*dunew;
+        end
     else
         % DAE is d/dt q(x) + f(x) + B*u(t) = 0
         Jfterm = feval(DAE.df_dx, x, DAE);
+        if 1 == compute_Jtn
+            % DAE is d/dt q(x) + f(x) + B*u(t) = 0
+            fbterm = feval(DAE.f, x, DAE);
+            if ninputs > 0
+                fbterm = fbterm + LMSobj.B*unew; % homotopy: will use DAE.d_utransient
+                Jtnterm = LMSobj.B*dunew;
+            else
+                Jtnterm = [];
+            end
+        end
     end
     if isfield(DAE, 'm') && isa(DAE.m, 'function_handle')
         nn = feval(DAE.nNoiseSources, DAE);
+        if 1 == compute_Jtn
+            fbterm = fbterm + feval(DAE.m, x, zeros(nn,1), DAE);
+        end
         Jfterm = Jfterm + feval(DAE.dm_dx, x, zeros(nn,1), DAE);
     end
+
     Jout = alphas(1)*feval(DAE.dq_dx, x, DAE) + betas(1)*Jfterm;
-    % (terms from prior timepoints don't contribute to derivative wrt x)
-end
-% end of dLMSfuncToSolve
+    if 1 == compute_Jtn
+        % out = alphas(1)*feval(DAE.q, x, DAE) + betas(1)*fbterm; % homotopy: alpha/betas depend on tnew, their derivatives needed
+        Jtn = dalphas(1)*feval(DAE.q, x, DAE) + betas(1)*Jtnterm + dbetas(1)*fbterm;
+    end
+
+    % (terms from prior timepoints don't contribute to derivative wrt x, but they can to derivatives wrt tn)
+    if 1 == compute_Jtn
+        % terms for prior timepoints
+        for i=2:(p+1)
+            x_nmi = LMSobj.vals(:,LMSobj.timeptidx-i+2);
+            % out = out + alphas(i)*feval(DAE.q, x_nmi, DAE);
+            if dalphas(i) ~= 0
+                Jtn = Jtn + dalphas(i)*feval(DAE.q, x_nmi, DAE);
+            end
+
+            if 0 ~= dbetas(i) % for efficiency: don't evaluate fbterm/Jtn
+                t_nmi = LMSobj.tpts(LMSobj.timeptidx-i+2);
+
+                if  ninputs > 0
+                    u_nmi = feval(DAE.utransient, t_nmi, DAE);
+                else
+                    u_nmi = [];
+                end
+                if 1 == LMSobj.f_takes_u
+                    % DAE is d/dt q(x) + f(x, u(t)) = 0
+                    fbterm = feval(DAE.f, x_nmi, u_nmi, DAE);
+                else
+                    % DAE is d/dt q(x) + f(x) + B*u(t) = 0
+                    fbterm = feval(DAE.f, x_nmi, DAE) ;
+                    if ninputs > 0
+                        fbterm = fbterm + LMSobj.B*u_nmi;
+                    end
+                end
+                if isfield(DAE, 'm') && isa(DAE.m, 'function_handle')
+                    nn = feval(DAE.nNoiseSources, DAE);
+                    fbterm = fbterm + feval(DAE.m, x_nmi, zeros(nn,1), DAE);
+                end
+                % out = out + betas(i)*fbterm;
+                Jtn = Jtn + dbetas(i)*fbterm;
+            end
+        end
+    end
+end % of dLMSfuncToSolve
+
+
+
+
+
+
+
+
+
+
+
+
 
 function newdx = TRANlimiting(dx, oldx, LMSobj)
     % JR: THIS IS A HACK (using just QSS limiting). It needs updates for
@@ -816,13 +1010,21 @@ function newdx = TRANlimiting(dx, oldx, LMSobj)
         u = [];
     end
     newdx = feval(LMSobj.DAE.NRlimiting, dx, oldx, u, LMSobj.DAE);
-end
-%end TRANlimiting
+end % of TRANlimiting
+
+
+
+
+
+
+
+
 
 % Bichen: Added an output struct to store fbterm, qterm, Jfterm and Jqterm
 %          Thoses terms will be stored to avoid redundant evaluation
 
 function [out_f, out_df, out_rhs, xlimOld, success, LMSPreComputedStuff] = LMS_f_df_rhs(x, funcparms)
+    % funcparms is an AFobj
     p = funcparms.LMS_add_on.TRmethod.order;
     alphas = funcparms.LMS_add_on.currentalphas; % length p
     betas = funcparms.LMS_add_on.currentbetas; % length p
@@ -884,7 +1086,7 @@ function [out_f, out_df, out_rhs, xlimOld, success, LMSPreComputedStuff] = LMS_f
         out_f_new = out_f;
         % For the 1st iteration of NR, evaluate f/q(x_{n-i})
         % otherwise, just use previously stored f and q
-        if funcparms.LMS_add_on.iter == 1 % JR: WHY ARE WE LOOKING AT THE NR ITERATION NO? BREAKS MODULARITY IN A BIG WAY.
+        if funcparms.LMS_add_on.iter == 1 % JR: WHY ARE WE LOOKING AT THE NR ITERATION NOW? BREAKS MODULARITY IN A BIG WAY.
             % OK: because some setup things need to be done only once, at the first NR iteration. This is a flag.
             % We need documentation of some of these variables: 
             % - what is .fqHistory, with some simple illustrative examples
@@ -943,7 +1145,7 @@ function [out_f, out_df, out_rhs, xlimOld, success, LMSPreComputedStuff] = LMS_f
             out_f_pre = out_f - out_f_new;
             LMSPreComputedStuff.out_f_pre = out_f_pre;
 
-        % If >2 iters, out_f_pre won't change
+        % If > 2 iters, out_f_pre won't change
         else
             out_f = out_f + funcparms.PreComputedStuff.out_f_pre;
             LMSPreComputedStuff.out_f_pre = funcparms.PreComputedStuff.out_f_pre;
@@ -1005,5 +1207,83 @@ function [out_f, out_df, out_rhs, xlimOld, success, LMSPreComputedStuff] = LMS_f
     out_rhs = out_df * x - out_f;
     xlimOld = [];
     success = 1;
-end
-% end of LMS_f_df_rhs
+end % of LMS_f_df_rhs
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% internal functions: wrappers for use with ArcCont %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+function out = Arc_LMSfuncToSolve(y, LMSobj)
+% y = [x; lambda]
+% at lambda = 0, we are at t=told; at lambda = 1; at tnew
+    x = y(1:end-1,1);
+    lambda = y(end,1);
+
+    startlambda = LMSobj.ArcContParms.StartLambda;
+    stoplambda = LMSobj.ArcContParms.StopLambda; 
+    lambdaspan = stoplambda-startlambda;
+
+    told = LMSobj.tpts(LMSobj.timeptidx);
+    % tolder = LMSobj.tpts(LMSobj.timeptidx-1); 
+    realtnew = LMSobj.realtnew; % this needs to be set up by whoever calls ArcCont
+
+    tnew = ((lambda-startlambda)*realtnew + (stoplambda-lambda)*told)/lambdaspan;
+    LMSobj.tnew = tnew; % one instance where pass-by-value is helpful
+
+    % need to recompute alphas and betas (we have changed the time-step)
+
+    p = LMSobj.TRmethod.order;
+    last_pp1_ts(1) = tnew;
+    LMSobj.timeptidx = LMSobj.timeptidx - 1; % sets the first prev timept to tn-2 - one instance where pass-by-value is helpful
+    last_pp1_ts(2:(p+1)) = LMSobj.tpts(LMSobj.timeptidx:-1:LMSobj.timeptidx-p+1); 
+    %
+    LMSobj.currentalphas = feval(LMSobj.TRmethod.alphasfunc, last_pp1_ts);
+    LMSobj.dcurrentalphas = feval(LMSobj.TRmethod.dalphasfunc, last_pp1_ts); 
+    LMSobj.currentbetas = feval(LMSobj.TRmethod.betasfunc, last_pp1_ts);
+    LMSobj.dcurrentbetas = feval(LMSobj.TRmethod.dbetasfunc, last_pp1_ts);
+    %
+    out = LMSfuncToSolve(x, LMSobj);
+end % of Arc_LMSfuncToSolve
+
+
+
+
+function dout = dArc_LMSfuncToSolve(y, LMSobj)
+% y = [x; lambda]
+    x = y(1:end-1,1);
+    lambda = y(end,1);
+
+    startlambda = LMSobj.ArcContParms.StartLambda;
+    stoplambda = LMSobj.ArcContParms.StopLambda; 
+    lambdaspan = stoplambda-startlambda;
+
+    told = LMSobj.tpts(LMSobj.timeptidx);
+    % tolder = LMSobj.tpts(LMSobj.timeptidx-1);
+    realtnew = LMSobj.realtnew; % this needs to be set up by whoever calls ArcCont
+
+    tnew = ((lambda-startlambda)*realtnew + (stoplambda-lambda)*told)/lambdaspan;
+    LMSobj.tnew = tnew; % one instance where pass-by-value is helpful
+
+    % need to recompute alphas and betas (we have changed the time-step)
+
+    p = LMSobj.TRmethod.order;
+    last_pp1_ts(1) = tnew;
+    LMSobj.timeptidx = LMSobj.timeptidx - 1; % sets the first prev timept to tn-2 - one instance where pass-by-value is helpful
+    last_pp1_ts(2:(p+1)) = LMSobj.tpts(LMSobj.timeptidx:-1:LMSobj.timeptidx-p+1); 
+    %
+    LMSobj.currentalphas = feval(LMSobj.TRmethod.alphasfunc, last_pp1_ts);
+    LMSobj.dcurrentalphas = feval(LMSobj.TRmethod.dalphasfunc, last_pp1_ts); 
+    LMSobj.currentbetas = feval(LMSobj.TRmethod.betasfunc, last_pp1_ts);
+    LMSobj.dcurrentbetas = feval(LMSobj.TRmethod.dbetasfunc, last_pp1_ts);
+    %
+    [doutx, dout_tnew] = dLMSfuncToSolve(x, LMSobj);
+    dout = [doutx, (realtnew-told)*dout_tnew/lambdaspan]; % dg/dlambda is the second term
+end % of Arc_LMSfuncToSolve

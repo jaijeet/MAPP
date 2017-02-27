@@ -19,7 +19,9 @@
 %            Euler_Newton_Curve_Tracing, arclength_continuation,
 %            continuation.
 %
+%dcsens      DC sensitivity analysis. Synonyms: QSSsens.
+%
 %See also
 %--------
 %
-%op, dcsweep, dcsweep2, ac, transient, homotopy
+%op, dcsweep, dcsweep2, ac, transient, homotopy, dcsens

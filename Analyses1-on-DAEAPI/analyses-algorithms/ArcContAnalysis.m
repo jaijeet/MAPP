@@ -136,8 +136,7 @@ function Jout = ACA_dg_dxLambda(y, ArcContAnalObj)
 	end
 end % dg_dxLambda
 
-function outObj = ArcContAnalSolve(ArcContAnalObj, initguess, ...
-                                    startLambda, stopLambda, initLambdaStep)
+function outObj = ArcContAnalSolve(ArcContAnalObj, initguess, startLambda, stopLambda, initLambdaStep)
 	% set up the ArcCont object (do this last)
 	if nargin < 3
 		startLambda = 0;
@@ -163,9 +162,7 @@ function outObj = ArcContAnalSolve(ArcContAnalObj, initguess, ...
 	outObj = ArcContAnalObj;
 end % ArcContAnalSolve
 
-function [figh, onames, colindex] = ACAplotVsArcLen(ACAobj, ...
-            stateoutputs, lgndprefix, linetype, figh, legends, colindex)
-
+function [figh, onames, colindex] = ACAplotVsArcLen(ACAobj, stateoutputs, lgndprefix, linetype, figh, legends, colindex)
 	% begin plothelper
 	if ischar(ACAobj.solution);
 		error('ACAplot: run solve successfully first');

@@ -25,6 +25,7 @@
 %                                                 memoryless (has only f part)
 %diode_ModSpec_wrapper                      - diode: nonlinear
 %capacitor_ModSpec_wrapper                  - capacitor: has only q part
+%mutualInductor_ModSpec_wrapper             - mutual inductor model
 %diodeCapacitor_ModSpec_wrapper             - diode w/ cap: with both f/q
 %basicSHMOS_ModSpec_wrapper                 - SH MOSFET: three-terminal
 %SHMOSWithParasitics_ModSpec_wrapper        - SH MOSFET: with both f/q,
@@ -43,5 +44,6 @@
 % resistor_ModSpec_wrapper, diode_ModSpec_wrapper, capacitor_ModSpec_wrapper,
 % diodeCapacitor_ModSpec_wrapper, basicSHMOS_ModSpec_wrapper,
 % SHMOSWithParasitics_ModSpec_wrapper,
-% DSAwareSHMOSWithParasitics_ModSpec_wrapper, vsrc_ModSpec_wrapper
+% DSAwareSHMOSWithParasitics_ModSpec_wrapper, vsrc_ModSpec_wrapper,
+% mutualinductor_ModSpec_wrapper
 %

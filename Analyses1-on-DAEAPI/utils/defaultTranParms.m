@@ -8,6 +8,7 @@ function TRparms = defaultTranParms()
 %          .abstol = 1e-9;
 %          .terminating_newline = 0;
 %          .limiting = 1;
+%
 %    TRparms.stepControlParms: (values shown below are the defaults)
 %          .doStepControl = 1; % 1 => enable timestep control
 %          .NRiterRange = [3, 8]; % NRiter range over which timestep
@@ -28,6 +29,7 @@ function TRparms = defaultTranParms()
 %                    % iters is too high.
 %          .NRfailCutFactor = 2; % by how much to decrease tstep if NR
 %                    % fails.
+%
 %   TRparms.LTEstepControlParms: (values shown below are the defaults)
 %         .doStepControl=1;  % 0 => enable LTE timestep control
 %         .dofirststep=1;    % 1 => enable the fist tstep will be trfirststep
@@ -43,6 +45,7 @@ function TRparms = defaultTranParms()
 %                            % trredoFactor*error_spec, rerun this tstep 
 %         .trredoCutFactor =2; % by how much to decrease this tstep if 
 %                              % rerun this tstep 
+%
 %    TRparms.trandbglvl = TRparms.NRparms.dbglvl by default
 %           -1: not even errors
 %            0: errors only
@@ -85,7 +88,7 @@ function TRparms = defaultTranParms()
 %         return values of correctorFunc should be as follows:
 %
 %         [newx, newt, iters, success] = feval(correctorFunc, t, x, args)
-%        where
+%           where:
 %            t is a timepoint value
 %            x is the solution of the DAE at t
 %            newx is the new/corrected/udpated value of x
@@ -96,15 +99,22 @@ function TRparms = defaultTranParms()
 %
 %    TRparms.correctorFuncArgs = 'unassigned'; 
 %
-%   TRparms.useAFobjForNR = 1 (default). If set to 1, uses Tianshi's
-%       AlgebraicFunction object interface for NR. If set to 0, uses
-%       JR's original simple interface to NR, where you specify f and
-%       df handles to NR as its arguments.
+%    TRparms.useAFobjForNR = 1 (default). If set to 1, uses Tianshi's
+%           AlgebraicFunction object interface for NR. If set to 0, uses
+%           JR's original simple interface to NR, where you specify f and
+%           df handles to NR as its arguments.
 %
-%   TRparms.doSpeedup = 1 (default). If set to 1, uses Bichen's efficient
+%    TRparms.doSpeedup = 1 (default). If set to 1, uses Bichen's efficient
 %           version of LMS routines - leads to a very significant speedup
 %           (upto about 5x for longer transients with expensive devices like
 %           BSIM). But currently, this is supported only for useAFobjForNR==1.
+%
+%    TRparms.homtopyAsLastResort = 0 (default). If set to 1, attempts homotopy 
+%           after repeated N-R failures cut the timestep to the minimum 
+%           (see .stepControlParms above). Currently implemented only in 
+%           JR's original simple interface, where you specify f and
+%           df handles to NR as its arguments (ie, not in Tianshi's
+%           AlgebraicFunction object interface [TODO]).
 %
 %
 %Examples
@@ -217,6 +227,7 @@ function TRparms = defaultTranParms()
     TRparms.doSpeedup = 1;
     %
     TRparms.useAFobjForNR = 1;  
+    TRparms.homotopyAsLastResort = 1;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type "help MAPPlicense" at the MATLAB/Octave prompt to see the license      %

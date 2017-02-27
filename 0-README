@@ -63,8 +63,6 @@ available from the release site http://MAPP.eecs.berkeley.edu, not this
       #                  # automatic differentiation capabilities.
       #                  # The default is vv2. Don't change it unless you 
       #                  # know what you are doing.
-      # --with-VAPP      # pull in VAPP (Verilog-A Parser and Processor)
-      #                  # VAPP is not enabled by default.
 
     $ make # this will also "install"
     
@@ -112,9 +110,7 @@ available from the release site http://MAPP.eecs.berkeley.edu, not this
     $ make clean
     $ make autoclean
 
-5. To use/test VAPP (assuming you configured with --with-VAPP), after step 3 
-   above, give the commands:
-      > start_VAPP 
-      > help VAPP
-
-   See VAPP/00-README for more information about VAPP.
+5. Step 3 above does not test A2oDAEAPI or A3oDAEAPI functionalities. Running
+   run_ALL_A2oDAEAPI_tests and run_ALL_A3oDAEAPI_tests will illustrate and
+   test some of this functionality. Warning: these can take a long time to
+   run.

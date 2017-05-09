@@ -14,8 +14,8 @@ on a non-linux system, the build system probably won't work unless you spend
 some time tweaking it for your own OS (we cannot do this; please don't ask!).
 If you cannot use linux or a compatible UNIX-based OS with all the required
 utilities, you should probably download and use the pre-packaged MAPP tarball
-available from the release site http://MAPP.eecs.berkeley.edu, not this
-"source release" from git.
+available from https://github.com/jaijeet/MAPP/wiki (look near the end of the
+page), not this "source release" from git.
 
 0. Your having been provided access to MAPP means that you have agreed to
    abide by the terms of MAPP's license, as laid out in the file 00-LICENSE

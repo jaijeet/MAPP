@@ -21,7 +21,7 @@ How to build DAEAPI with DAEAPI wrapper:
 		DAE = add_to_DAE(DAE, 'field_name', field_value);
 	   to augment the skeleton structure.
 	3. Use
-		DAE = end_DAE(DAE);
+		DAE = finish_DAE(DAE);
 	   to finish constructing;
 
 Demo: How to use DAEAPI wrapper to build DAEAPI for an simple RC line circuit

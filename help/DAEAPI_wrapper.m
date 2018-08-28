@@ -13,7 +13,7 @@
 %	    DAE = add_to_DAE(DAE, 'field_name', field_value);
 %   statements to augment the skeleton structure.
 %3. Finally, end with
-%	    DAE = end_DAE(DAE);
+%	    DAE = finish_DAE(DAE);
 %
 %help add_to_DAE for more information and examples.  
 %

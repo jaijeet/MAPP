@@ -81,8 +81,11 @@ function [dfdp, dqdp] = dfq_dp_DAEAPI_auto(x, u, parmObj, f_q_or_fq, DAE)
 			end
 			vvf_of_x = feval(DAE.f, x, u, DAE);
 		end
-
-		dfdp = der2mat(vvf_of_x);
+		if (isa(vvf_of_x, 'vecvalder'))
+			dfdp = der2mat(vvf_of_x);
+		else
+			dfdp = zeros(neqns, nparms);
+		end
 
 		if size(dfdp,1) < neqns || size(dfdp,2) < nparms
 			dfdp(neqns,nparms) = 0;
@@ -93,8 +96,11 @@ function [dfdp, dqdp] = dfq_dp_DAEAPI_auto(x, u, parmObj, f_q_or_fq, DAE)
 
 	if strfind(f_q_or_fq, 'q')
 		vvq_of_x = feval(DAE.q, x, DAE);
-
-		dqdp = der2mat(vvq_of_x);
+		if (isa(vvq_of_x, 'vecvalder'))
+			dqdp = der2mat(vvq_of_x);
+		else
+			dqdp = zeros(neqns, nparms);
+		end
 
 		if size(dqdp,1) < neqns || size(dqdp,2) < nparms
 			dqdp(neqns,nparms) = 0;

@@ -75,7 +75,7 @@ function DAE = res_vsrc_diode_RLC(uniqIDstr)
 	DAE.noutputs = @noutputs;
 	%
 % f, q: 
-	DAE.f_takes_inputs = 0;
+	DAE.f_takes_inputs = 1;
 	DAE.f = @f;
 	DAE.q = @q;
 	%
@@ -209,7 +209,8 @@ function out = NoiseSourceNames(DAE)
 
 %%%%%%%%%%%%%%%%%%%%% PARAMETER SUPPORT FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%
 function parmvals = parmdefaults(DAE)
-	parmvals = {1, 	1e4, 	1e-6, 1e-9, 1e-12, 0.025};
+	parmvals = {1, 	1e4, 	1e-6, 1e-9, 1e-12, 0.025}; % Original values
+	% parmvals = {1, 	1e4, 	1e-6, 0, 0, 0.25};
 		% {'R1', 'R2', 'C', 	'L', 'Is', 'Vt'};
 % end parmdefaults(...)
 
@@ -217,8 +218,9 @@ function parmvals = parmdefaults(DAE)
 % setparms is in setparms.m
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% CORE FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function fout = f(x, DAE)
+function fout = f(x, u, DAE)
 	e0 = x(1); e1 = x(2); e2 = x(3); iL = x(4); iE = x(5);
+	E = u;
 	[R1, R2, C1, L, Is, Vt] = deal(DAE.parms{:});
 
 	dobj = diode;
@@ -237,24 +239,24 @@ function fout = f(x, DAE)
 	fout(4,1) = -e2;
 
 	%	EBCR: e1 - e0 - E(t)				= 0
-	fout(5,1) = e1 - e0;
+	fout(5,1) = e1 - e0 - E;
 % end f(...)
 
 function qout = q(x, DAE)
 	e0 = x(1); e1 = x(2); e2 = x(3); iL = x(4); iE = x(5);
 	[R1, R2, C1, L, Is, Vt] = deal(DAE.parms{:});
 
-	qout = 0*x;
-
 	%	KCL2: -diode(e1-e2) + e2/R2 + d/dt (C*e2) + iL	= 0
 	qout(3,1) = C1*e2;
 
 	%	LBCR: d/dt (L*iL) - e2 				= 0
 	qout(4,1) = L*iL;
+
+	qout(5, 1) = 0;
 % end q(...)
 
 %%%%%%%%%%%%%%%%%%%%%% FIRST DERIVATIVES wrt x %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Jf = df_dx(x, DAE)
+function Jf = df_dx(x, u, DAE)
 	e0 = x(1); e1 = x(2); e2 = x(3); iL = x(4); iE = x(5);
 	[R1, R2, C1, L, Is, Vt] = deal(DAE.parms{:});
 

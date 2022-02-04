@@ -313,8 +313,8 @@ function [solution, iters, success, allpts] = NR_orig(ghandle, dghandle, ...
     HBdebuglvl = 1; % REMOVE
     %}
 
-    while ((norm(dx)>tolerance || norm(g)>residualtol) && (iter<maxiter))
-    %while ((norm(dx)>tolerance && norm(g)>residualtol) && (iter<maxiter))
+    %while ((norm(dx)>tolerance || norm(g)>residualtol) && (iter<maxiter))
+    while ((norm(dx)>tolerance && norm(g)>residualtol) && (iter<maxiter))
         %{
         if iter > 0 
             HBdebuglvl = 0;

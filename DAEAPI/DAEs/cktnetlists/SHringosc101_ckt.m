@@ -5,7 +5,7 @@ function cktnetlist = SHringosc101_ckt()
 %This is a test for speeding-up MNA_EqnEngine.
 %
 %The circuit
-%   A 101-stage ring oscillator made of N-type and P-type Shichman-Hodeges MOS
+%   A 101-stage ring oscillator made of N-type and P-type Shichman-Hodges MOS
 %   devices. This circuit uses subcircuit SHinverter.
 %
 %To see the schematic of this circuit, run:
@@ -17,15 +17,25 @@ function cktnetlist = SHringosc101_ckt()
 %
 % % set up DAE %
 % DAE = MNA_EqnEngine(SHringosc101_ckt);
+% % nodes inv1, inv50, and inv101 are outputs. To see others use
+% % StateOutputs(DAE).
+% % The period T is approximately (8.86-3.94)e-3 = 4.92e-3
 %
 % % DC analysis %
 % qss = dot_op(DAE);       
 % feval(qss.print, qss);
 %
 % % transient analysis %
-% xinit = zeros(feval(DAE.nunks, DAE),1);
-% tstart = 0; tstep = 1e-5; tstop = 5e-3;
-% LMSobj = dot_transient(DAE, xinit, tstart, tstep, tstop);
+% %load('SHringosc101_ckt_xinit_GEAR2_tstep1e-5.mat'); % sets up a periodic xinit.
+% load('SHringosc101_ckt_xinit_TRAP_3000pts.mat'); % sets up a periodic xinit.
+% %T=4.92e-3; % w tstep = 1e-5, GEAR2
+% %T=4.80398e-3; % w pts/cycle = 3000, TRAP
+% T=4.80328e-3; % w pts/cycle = 6000, TRAP
+% % pts_per_cycle = 3000; % takes 3478s with TRAP on jaam
+% pts_per_cycle = 6000; % takes {5842,6567}s with TRAP on jaam
+% tstart = 0; tstop = T; tstep = T/pts_per_cycle; % simulates "exactly" one period
+% %xinit = zeros(feval(DAE.nunks, DAE),1); % this will show startup transients
+% tic; LMSobj = dot_transient(DAE, xinit, tstart, tstep, tstop, 'method', 'TRAP'); toc
 % feval(LMSobj.plot, LMSobj);
 %
 %See also
@@ -36,7 +46,12 @@ function cktnetlist = SHringosc101_ckt()
 %
 
 %
+% Updated 2021/07/15, JR, to shorten osc. period, fix strange asymmetry in the last inverter, and speed up simulation.
 % Author: Tianshi Wang, 2016/10/02
+
+% %thisfile_fullpath = which('SHringosc101_ckt.m');
+% %thisdir = regexprep(thisfile_fullpath, '/SHringosc101_ckt.m','');
+% %initcondfile=sprintf('%s/%s', thisdir, 'SHringosc101_ckt_xinit.mat');
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,7 +73,8 @@ function cktnetlist = SHringosc101_ckt()
 
     VddDC = 5;
     VinDC = 1;
-    CL = 1e-6;
+    %CL = 1e-6;
+    CL = 1e-7;
 
     % vddElem
     subcktnetlist = add_element(subcktnetlist, vsrcModSpec(), 'Vdd', {'vdd', 'gnd'}, {}, {{'E',...
@@ -83,7 +99,7 @@ function cktnetlist = SHringosc101_ckt()
 
 
 	% ckt name
-	cktnetlist.cktname = 'Shichman-Hodges MOS ring oscillator with 5 stages';
+	cktnetlist.cktname = 'Shichman-Hodges MOS ring oscillator with 101 stages';
 
 	% nodes (names)
 	cktnetlist.nodenames = {'vdd'};
@@ -91,9 +107,6 @@ function cktnetlist = SHringosc101_ckt()
 		cktnetlist.nodenames{end+1} = sprintf('inv%d', c);
 	end
 	cktnetlist.groundnodename = 'gnd';
-
-	VddDC = 5;
-	CL = 1e-6;
 
 	% vddElem
 	cktnetlist = add_element(cktnetlist, vsrcModSpec(), 'Vdd', {'vdd', 'gnd'}, {}, {{'E',...
@@ -103,8 +116,9 @@ function cktnetlist = SHringosc101_ckt()
 	inverter.terminalnames = {'in', 'out'};
 
 	% X1Elem
-	cktnetlist = add_subcircuit(cktnetlist, inverter, 'X1', {'inv101', 'inv1'},...
-		{{'NMOS:::Beta', 2.1e-3}, {'PMOS:::Beta', 2.1e-3}}, {{'Vdd:::E', {'DC', 5.1}}});
+	% cktnetlist = add_subcircuit(cktnetlist, inverter, 'X1', {'inv101', 'inv1'},...
+	% 	{{'NMOS:::Beta', 2.1e-3}, {'PMOS:::Beta', 2.1e-3}}, {{'Vdd:::E', {'DC', 5.1}}});
+	cktnetlist = add_subcircuit(cktnetlist, inverter, 'X1', {'inv101', 'inv1'}, {}, {});
 
 	% c1Elem
 	cktnetlist = add_element(cktnetlist, capModSpec(), 'C1', {'inv1', 'gnd'}, ...
@@ -116,6 +130,9 @@ function cktnetlist = SHringosc101_ckt()
 		% % CcElem
 		% eval(sprintf('cktnetlist = add_element(cktnetlist, capModSpec(), ''C%d'', {''inv%d'', ''gnd''}, {{''C'', CL}}, {});'), c, c);
 	end
+    cktnetlist = add_output(cktnetlist, 'inv1');
+    cktnetlist = add_output(cktnetlist, 'inv50');
+    cktnetlist = add_output(cktnetlist, 'inv101');
 end
 
 

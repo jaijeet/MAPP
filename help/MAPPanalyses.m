@@ -21,6 +21,12 @@
 %
 %dcsens      DC sensitivity analysis. Synonyms: QSSsens.
 %
+%transens    Transient sensitivity analysis, direct and adjoint.
+%            Note: TADsens, the adjoint version of transient sensitvity
+%            analysis, also redirects here.
+%            Synonyms: TADsens.
+%
+%
 %See also
 %--------
 %

@@ -1,4 +1,5 @@
-AC_INIT([.])
+AC_INIT
+AC_CONFIG_SRCDIR([.])
 SHELL=/bin/bash
 host_os=$(uname -a);
 case $host_os in
@@ -22,9 +23,17 @@ AC_PROG_MAKE_SET
 
 dnl find and test the C compiler
 AC_PROG_CC
-AC_LANG_C
+AC_LANG([C])
 AC_PROG_CXX
-AC_HEADER_STDC
+#m4_warn([obsolete],
+#[The preprocessor macro `STDC_HEADERS' is obsolete.
+#  Except in unusual embedded environments, you can safely include all
+#  ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 
 AC_PATH_PROG(CAT,cat,AC_MSG_ERROR([echo cat not found - is this a Unix installation?]))
 AC_PATH_PROG(CHMOD,chmod,AC_MSG_ERROR([echo chmod not found - is this a Unix installation?]))
@@ -194,12 +203,14 @@ AC_SUBST(VAPP, $VAPP)
 AC_SUBST(MAPPTOP, `pwd`)
 
 dnl read <each file below>.in and write <each file below>
-AC_OUTPUT(Makefile setuppaths_MAPP.m start_MAPP.m Generate_help.sh
+AC_CONFIG_FILES([Makefile setuppaths_MAPP.m start_MAPP.m Generate_help.sh
           vecvalder/vv4/vv4-tests/create_vv4_models_for_test_vv4_MVS_9_stage_ring_oscillator_transient.py
           vecvalder/vv4/vv4-tests/test_vv4_MVS_9_stage_ring_oscillator_transient.m
           vecvalder/vv4/vv4-tests/check_for_vv4_python_dependencies.m
-          help/help_MAPP.txt Analyses1-on-DAEAPI/test-scripts/MAPPtest/MAPPtest.m)
-#AC_OUTPUT(Makefile setuppaths_MAPP.m start_MAPP.m Generate_help.sh help/help_MAPP.txt)
+          help/help_MAPP.txt Analyses1-on-DAEAPI/test-scripts/MAPPtest/MAPPtest.m])
+AC_OUTPUT
+#AC_CONFIG_FILES([Makefile setuppaths_MAPP.m start_MAPP.m Generate_help.sh help/help_MAPP.txt])
+AC_OUTPUT
 
 echo "--------------------------------------------------------------------"
 echo "$THEVERSION configured."

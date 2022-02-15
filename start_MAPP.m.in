@@ -44,7 +44,7 @@ if 1 == isOctave
         warning('off','Octave:load-file-in-path'); % doesn't work in 4.0.2
         warning('off','Octave:divide-by-zero'); % otherwise legend spits out lots of these warnings
         page_output_immediately(1);
-        do_braindead_shortcircuit_evaluation(1);
+        % do_braindead_shortcircuit_evaluation(1); % 2022/02/15: octave error with this
 end
 
 if 1 == isOctave

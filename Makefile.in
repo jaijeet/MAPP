@@ -427,5 +427,6 @@ clean:
 	@-rm -f $(MAPPTOP)/vecvalder/vv4/vv4-tests/test_vv4_MVS_9_stage_ring_oscillator_transient.m
 	@-rm -f $(MAPPTOP)/vecvalder/vv4/vv4-tests/check_for_vv4_python_dependencies.m
 	@-rm -fr $(MAPPTOP)/vecvalder/vv4/vv4-python/vv4/__pycache__
+	@-rm -f configure~
 	@-if [ -d $(MAPPLOCALLINKSDIR) ]; then FILES=`find $(MAPPLOCALLINKSDIR) -mindepth 1 -not -type l -not -type d -print`; if [ "$$FILES" != "" ]; then echo "$(MAPPLOCALLINKSDIR) contains non-soft-links: $${FILES}"; echo "Please move the above files out of $(MAPPLOCALLINKSDIR), then run make clean again."; else echo "removing $(MAPPLOCALLINKSDIR)"; rm -fr $(MAPPLOCALLINKSDIR) $(MAPPTOP)/locallinks-are-current; fi; fi
 

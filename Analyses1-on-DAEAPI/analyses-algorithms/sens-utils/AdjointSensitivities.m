@@ -1,9 +1,9 @@
 function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms)
-%function sensObj =  AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod,
-%tranparms) Returns an object/structure for computing sensitivities of a DAE
-%output via the adjoint method.
-%
-% Run "help transens" for more information.
+% function sensObj =  AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod,
+% tranparms) Returns an object/structure for computing sensitivities of a DAE
+% output via the adjoint method.
+% 
+%  Run "help transens" for more information.
     sensObj = SensitivitiesSkeleton(DAE, x0, pNom, tstep, TRmethod, tranparms);
     sensObj.computeSensitivities = @computeSensitivities;
     sensObj.last_z1_t = zeros(sensObj.n, 1);
@@ -16,24 +16,24 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
     sensObj.plotSensBar = @plotSensBar;
 
     function [sensObjOUT, success, mH, compTime] = computeSensitivities(sensObj, T)
-    %function [sensObjOUT, success, compTime] = computeSensitivities(sensObj, T)
-    %This function computes sensitivities of the DAE output at time T.
-    %
-    %INPUT args:
-    % - sensObj: AdjointSensitivities structure/object.
-    %
-    % - T:       Time at which to compute sensitivities.
-    %
-    %OUTPUT:
-    % - sensObjOUT: Sensitivities object, with latest transient results, as well
-    %               the latest ASF (adjoint sensitivity function).
-    %              
-    % - success:    1 if computation was successful, <1 otherwise.
-    %
-    % - mH:         Sensitivities of the DAE output at time T.
-    %
-    % - compTime:   Computation time of sensitivities (not including initial
-    %               transient analysis of the original DAE).
+    % function [sensObjOUT, success, compTime] = computeSensitivities(sensObj, T)
+    % This function computes sensitivities of the DAE output at time T.
+    % 
+    % INPUT args:
+    %  - sensObj: AdjointSensitivities structure/object.
+    % 
+    %  - T:       Time at which to compute sensitivities.
+    % 
+    % OUTPUT:
+    %  - sensObjOUT: Sensitivities object, with latest transient results, as well
+    %                the latest ASF (adjoint sensitivity function).
+    %               
+    %  - success:    1 if computation was successful, <1 otherwise.
+    % 
+    %  - mH:         Sensitivities of the DAE output at time T.
+    % 
+    %  - compTime:   Computation time of sensitivities (not including initial
+    %                transient analysis of the original DAE).
         compTime = 0;
         
         if T <= 0
@@ -59,10 +59,10 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         % Record computation time after initial transient analysis of DAE.
         tic;
 
-        %For estimating time derivatives for the last timestep
+        % For estimating time derivatives for the last timestep
         last_h = sensObj.ts(idx) - sensObj.ts(idx-1);
 
-        %Calculate latest C = dq/dx, G = df/dx, S = d/dt(dq/dp) + df/dp
+        % Calculate latest C = dq/dx, G = df/dx, S = d/dt(dq/dp) + df/dp
         [C_T, G_T, Sq_T, Sf_T] = sensObj.fetchAndReshapeJacobians(sensObj, idx);
         [C_prevT,~, Sq_prevT,~] = sensObj.fetchAndReshapeJacobians(sensObj, idx-1);
         S_T = Sf_T + (Sq_T - Sq_prevT) / last_h;
@@ -151,7 +151,7 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
     %
     % - idx:       Index of the ASF to plot.
         figure()
-        hold on
+        % hold on
         grid on
         axis tight
         TIdx = length(sensObj.last_z1_t);
@@ -163,7 +163,7 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         plotTitle = sprintf('[Adjoint] Index %d of the ASF for T=%0.4e', idx, T);
         title(plotTitle);
         xlabel('time');
-        hold off
+        % hold off
     % end plotASFIdx
 
     function plotSensBar(sensObj, plotAbs, logScale, parmNames)
@@ -199,9 +199,6 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         for i=1:length(parmNames)
             legendNames{i} = strrep(parmNames{i}, '_', '\_');
         end
-        x = categorical(legendNames);
-        x = reordercats(x, legendNames);
-
         pObj = sensObj.pNom.DeleteAll(sensObj.pNom);
         pObj = pObj.Add(parmNames, pObj);
         y = sensObj.last_mH(pObj.ParmIndices(pObj));
@@ -212,20 +209,29 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         end
 
         figure();
-        hold on
+        % hold on
         grid on
         axis tight
-        bar(x, y);
+		if logScale == 1
+            set(gca, 'YScale', 'log');
+        end
+
+        bar(1:length(y), y);
+		set(gca, 'XTick', 1:length(y));
+		axis('label[y]');
+		ylim_values = ylim();
+		label_pos = ylim_values(1) - (ylim_values(2) - ylim_values(1)) / 50;
+		for i = 1:length(y)
+			text (i, label_pos, legendNames{i}, "rotation", 90, "horizontalalignment", "right");
+		end
         plotTitle = sprintf('[Adjoint] Sens. of DAE output at T=%0.3e, times pNom',...
                              sensObj.last_T);
         if plotAbs == 1
             plotTitle = sprintf('[Abs. Val.] %s', plotTitle);
         end
         title(plotTitle);
-        if logScale == 1
-            set(gca, 'YScale', 'log');
-        end
-        hold off
+        
+        % hold off
     %end plotSensBar
 
     function sensLMSObj = AdjointSensLMS(sensObj)

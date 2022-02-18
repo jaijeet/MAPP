@@ -164,7 +164,6 @@ function sensObj = DirectSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms
             outputSens = abs(outputSens);
         end
         figure();
-        axis tight;
 		if logScale == 1
             set(gca, 'YScale', 'log');
         end
@@ -183,6 +182,7 @@ function sensObj = DirectSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms
 		title(plotTitle);
         xlabel('time');
 		grid on;
+		axis tight;
 		shg;
     % end plotSens
     
@@ -240,9 +240,6 @@ function sensObj = DirectSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms
         end
 
         figure();
-        % hold on
-        grid on
-        axis tight
 		if logScale == 1
             set(gca, 'YScale', 'log');
         end
@@ -251,6 +248,7 @@ function sensObj = DirectSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms
 		set(gca, 'XTick', 1:length(y));
 		axis('label[y]');
 		ylim_values = ylim();
+		
 		label_pos = ylim_values(1) - (ylim_values(2) - ylim_values(1)) / 50;
 		for i = 1:length(y)
 			text (i, label_pos, legendNames{i}, "rotation", 90, "horizontalalignment", "right");
@@ -261,8 +259,8 @@ function sensObj = DirectSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparms
             plotTitle = sprintf('[Abs. Val.] %s', plotTitle);
         end
         title(plotTitle);
-       
-        % hold off
+      	grid on;
+		xlim([0 length(y) + 1]);
     %end plotSensHistogram
 
     function sensLMSObj = DirectSensLMS(sensObj)

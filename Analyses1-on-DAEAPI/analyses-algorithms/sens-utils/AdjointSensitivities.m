@@ -151,9 +151,6 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
     %
     % - idx:       Index of the ASF to plot.
         figure()
-        % hold on
-        grid on
-        axis tight
         TIdx = length(sensObj.last_z1_t);
         T = sensObj.ts(TIdx);
         plot(sensObj.ts(1:TIdx), sensObj.last_z1_t(idx, :), 'LineWidth', 1.5);
@@ -163,7 +160,8 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         plotTitle = sprintf('[Adjoint] Index %d of the ASF for T=%0.4e', idx, T);
         title(plotTitle);
         xlabel('time');
-        % hold off
+		grid on;
+		axis tight;
     % end plotASFIdx
 
     function plotSensBar(sensObj, plotAbs, logScale, parmNames)
@@ -209,9 +207,6 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
         end
 
         figure();
-        % hold on
-        grid on
-        axis tight
 		if logScale == 1
             set(gca, 'YScale', 'log');
         end
@@ -220,6 +215,7 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
 		set(gca, 'XTick', 1:length(y));
 		axis('label[y]');
 		ylim_values = ylim();
+		
 		label_pos = ylim_values(1) - (ylim_values(2) - ylim_values(1)) / 50;
 		for i = 1:length(y)
 			text (i, label_pos, legendNames{i}, "rotation", 90, "horizontalalignment", "right");
@@ -230,8 +226,8 @@ function sensObj = AdjointSensitivities(DAE, x0, pNom, tstep, TRmethod, tranparm
             plotTitle = sprintf('[Abs. Val.] %s', plotTitle);
         end
         title(plotTitle);
-        
-        % hold off
+		xlim([0 length(y) + 1]);
+    	grid on;
     %end plotSensBar
 
     function sensLMSObj = AdjointSensLMS(sensObj)
